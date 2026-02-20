@@ -37,11 +37,15 @@ export const authAPI = {
 export const adminAPI = {
   createBranch: (data) => api.post('/admin/branches', data),
   getBranches: () => api.get('/admin/branches'),
+  updateBranch: (id, data) => api.put(`/admin/branches/${id}`, data),
+  deleteBranch: (id) => api.delete(`/admin/branches/${id}`),
   createProgram: (data) => api.post('/admin/programs', data),
-  getPrograms: () => api.get('/admin/programs'),
+  getPrograms: () => api.get('/programs'),
   updateProgram: (id, data) => api.put(`/admin/programs/${id}`, data),
+  deleteProgram: (id) => api.delete(`/admin/programs/${id}`),
   createUser: (data) => api.post('/admin/users', data),
   getUsers: () => api.get('/admin/users'),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
 };
 
 export const leadsAPI = {
