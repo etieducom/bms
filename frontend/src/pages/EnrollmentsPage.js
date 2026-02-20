@@ -1010,7 +1010,7 @@ const EnrollmentsPage = () => {
                       <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Amount</th>
                       <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Mode</th>
                       <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Inst #</th>
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Remarks</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Receipt</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
@@ -1020,7 +1020,16 @@ const EnrollmentsPage = () => {
                         <td className="px-4 py-2 text-sm font-semibold text-green-600">₹{payment.amount.toLocaleString()}</td>
                         <td className="px-4 py-2 text-sm">{payment.payment_mode}</td>
                         <td className="px-4 py-2 text-sm">{payment.installment_number || '-'}</td>
-                        <td className="px-4 py-2 text-sm text-slate-500">{payment.remarks || '-'}</td>
+                        <td className="px-4 py-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => viewReceipt(payment.id)}
+                            data-testid={`view-receipt-${payment.id}`}
+                          >
+                            <Printer className="w-3 h-3 mr-1" /> Receipt
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
