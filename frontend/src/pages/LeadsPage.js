@@ -417,17 +417,41 @@ const LeadsPage = () => {
               </div>
               <div className="space-y-2">
                 <Label>Program *</Label>
-                <Input {...register('program')} data-testid="lead-program-input" />
-                {errors.program && <p className="text-xs text-red-500">{errors.program.message}</p>}
+                <Select 
+                  value={selectedProgram} 
+                  onValueChange={setSelectedProgram}
+                >
+                  <SelectTrigger data-testid="lead-program-select">
+                    <SelectValue placeholder="Select program" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {programs.map((program) => (
+                      <SelectItem key={program.id} value={program.id}>
+                        {program.name} - ₹{program.fee.toLocaleString()} ({program.duration})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!selectedProgram && !editingLead && (
+                  <p className="text-xs text-red-500">Program is required</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Lead Source *</Label>
-                <Input {...register('lead_source')} data-testid="lead-source-input" />
+                <Input {...register('lead_source')} data-testid="lead-source-input" placeholder="Website, Referral, etc." />
                 {errors.lead_source && <p className="text-xs text-red-500">{errors.lead_source.message}</p>}
               </div>
               <div className="space-y-2">
-                <Label>Fee Quoted</Label>
-                <Input type="number" {...register('fee_quoted')} />
+                <Label>Fee Quoted (₹)</Label>
+                <Input type="number" {...register('fee_quoted')} placeholder={programs.find(p => p.id === selectedProgram)?.fee || ''} />
+              </div>
+              <div className="space-y-2">
+                <Label>Discount (%)</Label>
+                <Input 
+                  type="number" 
+                  {...register('discount_percent')} 
+                  placeholder={`Max: ${programs.find(p => p.id === selectedProgram)?.max_discount_percent || 0}%`}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Payment Plan</Label>
@@ -474,13 +498,23 @@ const LeadsPage = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Note</Label>
+              <Label>Note *</Label>
               <textarea
                 className="w-full min-h-24 px-3 py-2 border border-slate-200 rounded-md"
                 value={followupNote}
                 onChange={(e) => setFollowupNote(e.target.value)}
                 placeholder="Enter followup details..."
                 data-testid="followup-note-input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Follow-up Date & Time *</Label>
+              <input
+                type="datetime-local"
+                value={followupDate}
+                onChange={(e) => setFollowupDate(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+                data-testid="followup-date-input"
               />
             </div>
             <div className="flex justify-end gap-2">
