@@ -238,7 +238,15 @@ const AdminPanel = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-slate-600">{branch.location}</p>
+                  <div className="space-y-1">
+                    <p className="text-sm text-slate-600">{branch.location}</p>
+                    <p className="text-xs text-slate-500">{branch.city}, {branch.state} - {branch.pincode}</p>
+                    <div className="mt-2 pt-2 border-t border-slate-100">
+                      <p className="text-xs font-semibold text-slate-700">Branch Owner:</p>
+                      <p className="text-xs text-slate-600">{branch.owner_name} ({branch.owner_designation})</p>
+                      <p className="text-xs text-slate-500">{branch.branch_phone}</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -326,8 +334,9 @@ const AdminPanel = () => {
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Photo</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Contact</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Role</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Branch</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Actions</th>
@@ -336,8 +345,25 @@ const AdminPanel = () => {
               <tbody className="divide-y divide-slate-200">
                 {users.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 text-sm font-medium">{user.name}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{user.email}</td>
+                    <td className="px-6 py-4">
+                      {user.photo_url ? (
+                        <img src={user.photo_url} alt={user.name} className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
+                          <span className="text-slate-600 font-semibold text-sm">
+                            {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-medium">{user.name}</p>
+                      <p className="text-xs text-slate-500">{user.designation || user.role}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm text-slate-600">{user.email}</p>
+                      <p className="text-xs text-slate-500">{user.phone || 'No phone'}</p>
+                    </td>
                     <td className="px-6 py-4 text-sm">
                       <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800">
                         {user.role}
