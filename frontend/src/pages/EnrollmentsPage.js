@@ -414,58 +414,89 @@ const EnrollmentsPage = () => {
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Student</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Contact</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Program</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Final Fee</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Payment Status</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Enrollment Date</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {enrollments.map((enrollment) => (
-                      <tr key={enrollment.id} className="hover:bg-slate-50" data-testid={`enrollment-${enrollment.id}`}>
-                        <td className="px-4 py-3">
-                          <p className="font-medium">{enrollment.student_name}</p>
-                          <p className="text-xs text-slate-500">{enrollment.email}</p>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge variant="outline">{enrollment.program_name}</Badge>
-                        </td>
-                        <td className="px-4 py-3 font-semibold text-green-700">
-                          ₹{enrollment.final_fee?.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {format(new Date(enrollment.enrollment_date), 'dd MMM yyyy')}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => openPaymentPlanDialog(enrollment)}
-                              data-testid={`payment-plan-btn-${enrollment.id}`}
-                            >
-                              <FileText className="w-4 h-4 mr-1" /> Plan
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              className="bg-slate-900 hover:bg-slate-800"
-                              onClick={() => openRecordPaymentDialog(enrollment)}
-                              data-testid={`record-payment-btn-${enrollment.id}`}
-                            >
-                              <CreditCard className="w-4 h-4 mr-1" /> Pay
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              onClick={() => openViewPaymentsDialog(enrollment)}
-                              data-testid={`view-payments-btn-${enrollment.id}`}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {enrollments.map((enrollment) => {
+                      const status = enrollmentPaymentStatus[enrollment.id] || {};
+                      return (
+                        <tr key={enrollment.id} className="hover:bg-slate-50" data-testid={`enrollment-${enrollment.id}`}>
+                          <td className="px-4 py-3">
+                            <p className="font-medium">{enrollment.student_name}</p>
+                            <p className="text-xs text-slate-500">{enrollment.city || 'N/A'}</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="text-sm">{enrollment.phone}</p>
+                            <p className="text-xs text-slate-500">{enrollment.email}</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline">{enrollment.program_name}</Badge>
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-green-700">
+                            ₹{enrollment.final_fee?.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3">
+                            {status.isPaidFull ? (
+                              <Badge className="bg-green-100 text-green-700">
+                                <CheckCircle className="w-3 h-3 mr-1" /> Paid
+                              </Badge>
+                            ) : status.totalPaid > 0 ? (
+                              <div>
+                                <Badge className="bg-yellow-100 text-yellow-700">
+                                  <Clock className="w-3 h-3 mr-1" /> Partial
+                                </Badge>
+                                <p className="text-xs text-slate-500 mt-1">
+                                  ₹{status.totalPaid?.toLocaleString()} / ₹{status.totalFee?.toLocaleString()}
+                                </p>
+                              </div>
+                            ) : (
+                              <Badge className="bg-red-100 text-red-700">
+                                <Clock className="w-3 h-3 mr-1" /> Pending
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {format(new Date(enrollment.enrollment_date), 'dd MMM yyyy')}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-2">
+                              {!status.hasPlan && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => openPaymentPlanDialog(enrollment)}
+                                  data-testid={`payment-plan-btn-${enrollment.id}`}
+                                >
+                                  <FileText className="w-4 h-4 mr-1" /> Plan
+                                </Button>
+                              )}
+                              <Button 
+                                size="sm" 
+                                className="bg-slate-900 hover:bg-slate-800"
+                                onClick={() => openRecordPaymentDialog(enrollment)}
+                                data-testid={`record-payment-btn-${enrollment.id}`}
+                              >
+                                <CreditCard className="w-4 h-4 mr-1" /> Pay
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => openViewPaymentsDialog(enrollment)}
+                                data-testid={`view-payments-btn-${enrollment.id}`}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
                 {enrollments.length === 0 && (
