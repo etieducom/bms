@@ -1,20 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, BarChart3, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart3, LogOut, Menu, X, Bell, FileText, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { followupAPI } from '@/api/api';
 
 const Layout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
+  useEffect(() => {
+    if (user.role !== 'Admin') {
+      fetchPendingCount();
+      const interval = setInterval(fetchPendingCount, 60000);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
+  const fetchPendingCount = async () => {
+    try {
+      const response = await followupAPI.getPendingCount();
+      setPendingCount(response.data.count);
+    } catch (error) {
+      console.error('Failed to fetch pending count');
+    }
+  };
+
   const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    { icon: Users, label: 'Leads', path: '/leads' },
-    { icon: BarChart3, label: 'Analytics', path: '/analytics' },
-  ];
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/', show: true },
+    { icon: Users, label: 'Leads', path: '/leads', show: true },
+    { icon: Bell, label: 'Pending Follow-ups', path: '/followups', show: user.role !== 'Front Desk Executive', badge: pendingCount },
+    { icon: BarChart3, label: 'Analytics', path: '/analytics', show: true },
+    { icon: FileText, label: 'Reports', path: '/reports', show: true },
+    { icon: Settings, label: 'Admin Panel', path: '/admin', show: user.role === 'Admin' },
+  ].filter(item => item.show);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -73,14 +96,19 @@ const Layout = ({ children }) => {
                     navigate(item.path);
                     setSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                     isActive
                       ? 'bg-slate-900 text-white'
                       : 'text-slate-700 hover:bg-slate-100'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
-                  <span className="font-medium">{item.label}</span>
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-5 h-5" />
+                    <span className="font-medium">{item.label}</span>
+                  </div>
+                  {item.badge > 0 && (
+                    <Badge className="bg-red-500 text-white">{item.badge}</Badge>
+                  )}
                 </button>
               );
             })}
