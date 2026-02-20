@@ -327,13 +327,17 @@ async def create_program(program: ProgramCreate, current_user: User = Depends(re
     await db.programs.insert_one(program_dict)
     return new_program
 
-@api_router.get("/admin/programs", response_model=List[Program])
+@api_router.get("/programs", response_model=List[Program])
 async def get_programs(current_user: User = Depends(get_current_user)):
     programs = await db.programs.find({}, {"_id": 0}).to_list(1000)
     for program in programs:
         if isinstance(program.get('created_at'), str):
             program['created_at'] = datetime.fromisoformat(program['created_at'])
     return [Program(**p) for p in programs]
+
+@api_router.get("/admin/programs", response_model=List[Program])
+async def get_programs_admin(current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    return await get_programs(current_user)
 
 @api_router.put("/admin/programs/{program_id}", response_model=Program)
 async def update_program(program_id: str, program_update: ProgramCreate, current_user: User = Depends(require_role([UserRole.ADMIN]))):
@@ -348,6 +352,45 @@ async def update_program(program_id: str, program_update: ProgramCreate, current
     if isinstance(updated_program.get('created_at'), str):
         updated_program['created_at'] = datetime.fromisoformat(updated_program['created_at'])
     return Program(**updated_program)
+
+@api_router.delete("/admin/programs/{program_id}")
+async def delete_program(program_id: str, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    result = await db.programs.delete_one({"id": program_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Program not found")
+    return {"message": "Program deleted successfully"}
+
+@api_router.delete("/admin/branches/{branch_id}")
+async def delete_branch(branch_id: str, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    result = await db.branches.delete_one({"id": branch_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    return {"message": "Branch deleted successfully"}
+
+@api_router.put("/admin/branches/{branch_id}", response_model=Branch)
+async def update_branch(branch_id: str, branch_update: BranchCreate, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    result = await db.branches.update_one(
+        {"id": branch_id},
+        {"$set": branch_update.model_dump()}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    
+    updated_branch = await db.branches.find_one({"id": branch_id}, {"_id": 0})
+    if isinstance(updated_branch.get('created_at'), str):
+        updated_branch['created_at'] = datetime.fromisoformat(updated_branch['created_at'])
+    return Branch(**updated_branch)
+
+@api_router.delete("/admin/users/{user_id}")
+async def delete_user(user_id: str, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    # Prevent deleting self
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    result = await db.users.delete_one({"id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "User deleted successfully"}
 
 # Admin - User Management
 @api_router.post("/admin/users", response_model=UserResponse)
