@@ -1072,7 +1072,7 @@ async def create_enrollment(enrollment: EnrollmentCreate, current_user: User = D
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
     
-    if lead["status"] != LeadStatus.CONVERTED:
+    if lead["status"] != LeadStatus.CONVERTED.value:
         raise HTTPException(status_code=400, detail="Only converted leads can be enrolled")
     
     # Check if already enrolled
