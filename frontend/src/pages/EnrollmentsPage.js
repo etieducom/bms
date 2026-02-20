@@ -67,6 +67,14 @@ const EnrollmentsPage = () => {
   const [viewPaymentsDialog, setViewPaymentsDialog] = useState(false);
   const [enrollmentPayments, setEnrollmentPayments] = useState([]);
 
+  // Receipt dialog
+  const [receiptDialog, setReceiptDialog] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
+  const receiptRef = useRef(null);
+
+  // Enrollment payment status cache
+  const [enrollmentPaymentStatus, setEnrollmentPaymentStatus] = useState({});
+
   useEffect(() => {
     fetchData();
   }, []);
