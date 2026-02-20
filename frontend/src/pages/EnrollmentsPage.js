@@ -187,7 +187,7 @@ const EnrollmentsPage = () => {
       return;
     }
     try {
-      await paymentAPI.createPayment({
+      const paymentRes = await paymentAPI.createPayment({
         enrollment_id: selectedEnrollment.id,
         payment_plan_id: existingPaymentPlan.id,
         amount: parseFloat(paymentForm.amount),
@@ -198,6 +198,12 @@ const EnrollmentsPage = () => {
       });
       toast.success('Payment recorded successfully!');
       setRecordPaymentDialog(false);
+      
+      // Show receipt
+      const receiptRes = await paymentAPI.generateReceipt(paymentRes.data.id);
+      setReceiptData(receiptRes.data);
+      setReceiptDialog(true);
+      
       setPaymentForm({
         amount: '',
         payment_mode: 'Cash',
@@ -208,6 +214,43 @@ const EnrollmentsPage = () => {
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to record payment');
+    }
+  };
+
+  const handlePrintReceipt = () => {
+    const printContent = receiptRef.current;
+    const printWindow = window.open('', '', 'height=600,width=800');
+    printWindow.document.write('<html><head><title>Payment Receipt</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write(`
+      body { font-family: Arial, sans-serif; padding: 20px; }
+      .receipt { max-width: 600px; margin: 0 auto; border: 2px solid #1e293b; padding: 30px; }
+      .header { text-align: center; border-bottom: 2px solid #1e293b; padding-bottom: 20px; margin-bottom: 20px; }
+      .header h1 { margin: 0; color: #1e293b; font-size: 24px; }
+      .header p { margin: 5px 0; color: #64748b; }
+      .receipt-number { background: #f1f5f9; padding: 10px; text-align: center; margin-bottom: 20px; }
+      .details { margin-bottom: 20px; }
+      .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+      .label { color: #64748b; }
+      .value { font-weight: 600; }
+      .amount-section { background: #f0fdf4; padding: 15px; text-align: center; margin-top: 20px; }
+      .amount { font-size: 28px; color: #16a34a; font-weight: bold; }
+      .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 12px; }
+    `);
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write(printContent.innerHTML);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  const viewReceipt = async (paymentId) => {
+    try {
+      const receiptRes = await paymentAPI.generateReceipt(paymentId);
+      setReceiptData(receiptRes.data);
+      setReceiptDialog(true);
+    } catch (error) {
+      toast.error('Failed to load receipt');
     }
   };
 
