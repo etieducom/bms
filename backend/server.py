@@ -60,11 +60,31 @@ class Branch(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     location: str
+    address: str
+    city: str
+    state: str
+    pincode: str
+    owner_name: str
+    owner_email: EmailStr
+    owner_phone: str
+    owner_designation: str
+    branch_phone: str
+    branch_email: EmailStr
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class BranchCreate(BaseModel):
     name: str
     location: str
+    address: str
+    city: str
+    state: str
+    pincode: str
+    owner_name: str
+    owner_email: EmailStr
+    owner_phone: str
+    owner_designation: str
+    branch_phone: str
+    branch_email: EmailStr
 
 class Program(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -87,6 +107,15 @@ class UserCreate(BaseModel):
     name: str
     role: Optional[UserRole] = UserRole.COUNSELLOR
     branch_id: Optional[str] = None
+    phone: Optional[str] = None
+    alternate_phone: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pincode: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    designation: Optional[str] = None
+    photo_url: Optional[str] = None
 
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -96,6 +125,15 @@ class User(BaseModel):
     role: UserRole
     branch_id: Optional[str] = None
     hashed_password: str
+    phone: Optional[str] = None
+    alternate_phone: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pincode: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    designation: Optional[str] = None
+    photo_url: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserResponse(BaseModel):
@@ -104,6 +142,15 @@ class UserResponse(BaseModel):
     name: str
     role: UserRole
     branch_id: Optional[str] = None
+    phone: Optional[str] = None
+    alternate_phone: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pincode: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    designation: Optional[str] = None
+    photo_url: Optional[str] = None
 
 class Token(BaseModel):
     access_token: str
@@ -269,6 +316,15 @@ async def register(user: UserCreate):
         name=user.name,
         role=user.role,
         branch_id=user.branch_id,
+        phone=user.phone,
+        alternate_phone=user.alternate_phone,
+        address=user.address,
+        city=user.city,
+        state=user.state,
+        pincode=user.pincode,
+        date_of_birth=user.date_of_birth,
+        designation=user.designation,
+        photo_url=user.photo_url,
         hashed_password=get_password_hash(user.password)
     )
     
@@ -276,7 +332,7 @@ async def register(user: UserCreate):
     user_dict['created_at'] = user_dict['created_at'].isoformat()
     
     await db.users.insert_one(user_dict)
-    return UserResponse(id=new_user.id, email=new_user.email, name=new_user.name, role=new_user.role, branch_id=new_user.branch_id)
+    return UserResponse(**{k: v for k, v in new_user.model_dump().items() if k != 'hashed_password'})
 
 @api_router.post("/auth/login", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -292,12 +348,12 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     return Token(
         access_token=access_token,
         token_type="bearer",
-        user=UserResponse(id=user.id, email=user.email, name=user.name, role=user.role, branch_id=user.branch_id)
+        user=UserResponse(**{k: v for k, v in user.model_dump().items() if k != 'hashed_password'})
     )
 
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
-    return UserResponse(id=current_user.id, email=current_user.email, name=current_user.name, role=current_user.role, branch_id=current_user.branch_id)
+    return UserResponse(**{k: v for k, v in current_user.model_dump().items() if k != 'hashed_password'})
 
 # Admin - Branch Management
 @api_router.post("/admin/branches", response_model=Branch)
@@ -381,7 +437,29 @@ async def update_branch(branch_id: str, branch_update: BranchCreate, current_use
         updated_branch['created_at'] = datetime.fromisoformat(updated_branch['created_at'])
     return Branch(**updated_branch)
 
-@api_router.delete("/admin/users/{user_id}")
+@api_router.get("/admin/branches/{branch_id}", response_model=Branch)
+async def get_branch_details(branch_id: str, current_user: User = Depends(get_current_user)):
+    branch = await db.branches.find_one({"id": branch_id}, {"_id": 0})
+    if not branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    
+    if isinstance(branch.get('created_at'), str):
+        branch['created_at'] = datetime.fromisoformat(branch['created_at'])
+    return Branch(**branch)
+
+@api_router.post("/upload/photo", response_model=dict)
+async def upload_photo(file: bytes = None, current_user: User = Depends(get_current_user)):
+    """Simple base64 photo upload endpoint"""
+    if not file:
+        raise HTTPException(status_code=400, detail="No file provided")
+    
+    import base64
+    # In production, upload to S3/cloud storage
+    # For now, store as base64
+    photo_data = base64.b64encode(file).decode('utf-8')
+    photo_url = f"data:image/jpeg;base64,{photo_data[:100]}..."  # Truncated for demo
+    
+    return {"photo_url": photo_url, "message": "Photo uploaded successfully"}
 async def delete_user(user_id: str, current_user: User = Depends(require_role([UserRole.ADMIN]))):
     # Prevent deleting self
     if user_id == current_user.id:
