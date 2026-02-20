@@ -170,6 +170,19 @@ const AdminPanel = () => {
     }
   };
 
+  const handleCreateCategory = async (e) => {
+    e.preventDefault();
+    try {
+      await expenseAPI.createCategory(categoryForm);
+      toast.success('Expense category created successfully');
+      setCategoryDialog(false);
+      setCategoryForm({ name: '', description: '' });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to create category');
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="admin-panel">
       <div>
