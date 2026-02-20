@@ -1,0 +1,940 @@
+import React, { useState, useEffect } from 'react';
+import { enrollmentAPI, paymentAPI, adminAPI } from '@/api/api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { Plus, ChevronRight, ChevronLeft, UserPlus, CreditCard, FileText, Eye } from 'lucide-react';
+import { format } from 'date-fns';
+
+const PAYMENT_MODES = ['Cash', 'Card', 'UPI', 'Net Banking', 'Cheque'];
+
+const EnrollmentsPage = () => {
+  const [activeTab, setActiveTab] = useState('converted');
+  const [convertedLeads, setConvertedLeads] = useState([]);
+  const [enrollments, setEnrollments] = useState([]);
+  const [programs, setPrograms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Enrollment dialog
+  const [enrollDialog, setEnrollDialog] = useState(false);
+  const [enrollingLead, setEnrollingLead] = useState(null);
+  const [enrollStep, setEnrollStep] = useState(1);
+  const [enrollForm, setEnrollForm] = useState({
+    student_name: '',
+    email: '',
+    phone: '',
+    date_of_birth: '',
+    gender: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    highest_qualification: '',
+    institution_name: '',
+    passing_year: '',
+    percentage: '',
+    program_id: '',
+    fee_quoted: '',
+    discount_percent: '',
+    enrollment_date: new Date().toISOString().split('T')[0],
+  });
+
+  // Payment plan dialog
+  const [paymentPlanDialog, setPaymentPlanDialog] = useState(false);
+  const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+  const [paymentPlanType, setPaymentPlanType] = useState('One-time');
+  const [installmentsCount, setInstallmentsCount] = useState(3);
+  const [installments, setInstallments] = useState([]);
+
+  // Record payment dialog
+  const [recordPaymentDialog, setRecordPaymentDialog] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    payment_mode: 'Cash',
+    payment_date: new Date().toISOString().split('T')[0],
+    installment_number: '',
+    remarks: ''
+  });
+  const [existingPaymentPlan, setExistingPaymentPlan] = useState(null);
+
+  // View payments dialog
+  const [viewPaymentsDialog, setViewPaymentsDialog] = useState(false);
+  const [enrollmentPayments, setEnrollmentPayments] = useState([]);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [convertedRes, enrollmentsRes, programsRes] = await Promise.all([
+        enrollmentAPI.getConvertedLeads(),
+        enrollmentAPI.getEnrollments(),
+        adminAPI.getPrograms()
+      ]);
+      setConvertedLeads(convertedRes.data);
+      setEnrollments(enrollmentsRes.data);
+      setPrograms(programsRes.data);
+    } catch (error) {
+      toast.error('Failed to fetch data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartEnrollment = (lead) => {
+    setEnrollingLead(lead);
+    const program = programs.find(p => p.id === lead.program_id);
+    setEnrollForm({
+      student_name: lead.name,
+      email: lead.email,
+      phone: lead.number,
+      date_of_birth: '',
+      gender: '',
+      address: lead.address || '',
+      city: lead.city || '',
+      state: lead.state || '',
+      pincode: '',
+      highest_qualification: '',
+      institution_name: '',
+      passing_year: '',
+      percentage: '',
+      program_id: lead.program_id,
+      fee_quoted: lead.fee_quoted?.toString() || program?.fee?.toString() || '',
+      discount_percent: lead.discount_percent?.toString() || '0',
+      enrollment_date: new Date().toISOString().split('T')[0],
+    });
+    setEnrollStep(1);
+    setEnrollDialog(true);
+  };
+
+  const handleEnrollmentSubmit = async () => {
+    try {
+      await enrollmentAPI.createEnrollment({
+        lead_id: enrollingLead.id,
+        ...enrollForm,
+        fee_quoted: parseFloat(enrollForm.fee_quoted),
+        discount_percent: enrollForm.discount_percent ? parseFloat(enrollForm.discount_percent) : 0,
+        percentage: enrollForm.percentage ? parseFloat(enrollForm.percentage) : null,
+      });
+      toast.success('Student enrolled successfully!');
+      setEnrollDialog(false);
+      setEnrollingLead(null);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to create enrollment');
+    }
+  };
+
+  const handleCreatePaymentPlan = async () => {
+    try {
+      const planData = {
+        enrollment_id: selectedEnrollment.id,
+        plan_type: paymentPlanType,
+        total_amount: selectedEnrollment.final_fee,
+        installments_count: paymentPlanType === 'Installments' ? installmentsCount : null,
+        installments: paymentPlanType === 'Installments' ? installments : null,
+      };
+      await paymentAPI.createPaymentPlan(planData);
+      toast.success('Payment plan created successfully!');
+      setPaymentPlanDialog(false);
+      setSelectedEnrollment(null);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to create payment plan');
+    }
+  };
+
+  const handleRecordPayment = async () => {
+    if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    try {
+      await paymentAPI.createPayment({
+        enrollment_id: selectedEnrollment.id,
+        payment_plan_id: existingPaymentPlan.id,
+        amount: parseFloat(paymentForm.amount),
+        payment_mode: paymentForm.payment_mode,
+        payment_date: paymentForm.payment_date,
+        installment_number: paymentForm.installment_number ? parseInt(paymentForm.installment_number) : null,
+        remarks: paymentForm.remarks
+      });
+      toast.success('Payment recorded successfully!');
+      setRecordPaymentDialog(false);
+      setPaymentForm({
+        amount: '',
+        payment_mode: 'Cash',
+        payment_date: new Date().toISOString().split('T')[0],
+        installment_number: '',
+        remarks: ''
+      });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to record payment');
+    }
+  };
+
+  const openRecordPaymentDialog = async (enrollment) => {
+    setSelectedEnrollment(enrollment);
+    try {
+      const planRes = await enrollmentAPI.getPaymentPlan(enrollment.id);
+      if (!planRes.data) {
+        toast.error('Please create a payment plan first');
+        return;
+      }
+      setExistingPaymentPlan(planRes.data);
+      setRecordPaymentDialog(true);
+    } catch (error) {
+      toast.error('Failed to fetch payment plan');
+    }
+  };
+
+  const openViewPaymentsDialog = async (enrollment) => {
+    setSelectedEnrollment(enrollment);
+    try {
+      const [paymentsRes, planRes] = await Promise.all([
+        enrollmentAPI.getEnrollmentPayments(enrollment.id),
+        enrollmentAPI.getPaymentPlan(enrollment.id)
+      ]);
+      setEnrollmentPayments(paymentsRes.data);
+      setExistingPaymentPlan(planRes.data);
+      setViewPaymentsDialog(true);
+    } catch (error) {
+      toast.error('Failed to fetch payments');
+    }
+  };
+
+  const openPaymentPlanDialog = (enrollment) => {
+    setSelectedEnrollment(enrollment);
+    setPaymentPlanType('One-time');
+    setInstallmentsCount(3);
+    setInstallments([]);
+    setPaymentPlanDialog(true);
+  };
+
+  const generateInstallments = () => {
+    const amount = selectedEnrollment.final_fee / installmentsCount;
+    const newInstallments = [];
+    const today = new Date();
+    for (let i = 0; i < installmentsCount; i++) {
+      const dueDate = new Date(today);
+      dueDate.setMonth(dueDate.getMonth() + i);
+      newInstallments.push({
+        installment_number: i + 1,
+        amount: Math.round(amount),
+        due_date: dueDate.toISOString().split('T')[0]
+      });
+    }
+    setInstallments(newInstallments);
+  };
+
+  useEffect(() => {
+    if (paymentPlanType === 'Installments' && selectedEnrollment) {
+      generateInstallments();
+    }
+  }, [installmentsCount, paymentPlanType, selectedEnrollment]);
+
+  const calculateFinalFee = () => {
+    const fee = parseFloat(enrollForm.fee_quoted) || 0;
+    const discount = parseFloat(enrollForm.discount_percent) || 0;
+    return fee - (fee * discount / 100);
+  };
+
+  const totalPaid = (enrollment) => {
+    return enrollmentPayments.reduce((sum, p) => sum + p.amount, 0);
+  };
+
+  return (
+    <div className="space-y-6" data-testid="enrollments-page">
+      <div>
+        <h1 className="text-4xl font-bold tracking-tight mb-2">Enrollments</h1>
+        <p className="text-slate-600">Manage student enrollments and payments</p>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="converted" data-testid="converted-tab">
+            Ready to Enroll ({convertedLeads.length})
+          </TabsTrigger>
+          <TabsTrigger value="enrolled" data-testid="enrolled-tab">
+            Enrolled ({enrollments.length})
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Converted Leads - Ready for Enrollment */}
+        <TabsContent value="converted" className="space-y-4">
+          <Card className="border-slate-200 shadow-soft">
+            <CardHeader>
+              <CardTitle>Converted Leads</CardTitle>
+              <CardDescription>These leads are ready to be enrolled as students</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Name</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Contact</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Program</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Fee Quoted</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {convertedLeads.map((lead) => (
+                      <tr key={lead.id} className="hover:bg-slate-50" data-testid={`converted-lead-${lead.id}`}>
+                        <td className="px-4 py-3">
+                          <p className="font-medium">{lead.name}</p>
+                          <p className="text-xs text-slate-500">{lead.city || 'N/A'}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-sm">{lead.number}</p>
+                          <p className="text-xs text-slate-500">{lead.email}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline">{lead.program_name}</Badge>
+                        </td>
+                        <td className="px-4 py-3 font-semibold">
+                          {lead.fee_quoted ? `₹${lead.fee_quoted.toLocaleString()}` : '-'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Button 
+                            size="sm" 
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => handleStartEnrollment(lead)}
+                            data-testid={`enroll-btn-${lead.id}`}
+                          >
+                            <UserPlus className="w-4 h-4 mr-1" /> Enroll
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {convertedLeads.length === 0 && (
+                  <div className="text-center py-12 text-slate-500">
+                    {loading ? 'Loading...' : 'No converted leads pending enrollment'}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Enrolled Students */}
+        <TabsContent value="enrolled" className="space-y-4">
+          <Card className="border-slate-200 shadow-soft">
+            <CardHeader>
+              <CardTitle>Enrolled Students</CardTitle>
+              <CardDescription>Manage payments for enrolled students</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Student</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Program</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Final Fee</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Enrollment Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {enrollments.map((enrollment) => (
+                      <tr key={enrollment.id} className="hover:bg-slate-50" data-testid={`enrollment-${enrollment.id}`}>
+                        <td className="px-4 py-3">
+                          <p className="font-medium">{enrollment.student_name}</p>
+                          <p className="text-xs text-slate-500">{enrollment.email}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline">{enrollment.program_name}</Badge>
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-green-700">
+                          ₹{enrollment.final_fee?.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {format(new Date(enrollment.enrollment_date), 'dd MMM yyyy')}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => openPaymentPlanDialog(enrollment)}
+                              data-testid={`payment-plan-btn-${enrollment.id}`}
+                            >
+                              <FileText className="w-4 h-4 mr-1" /> Plan
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              className="bg-slate-900 hover:bg-slate-800"
+                              onClick={() => openRecordPaymentDialog(enrollment)}
+                              data-testid={`record-payment-btn-${enrollment.id}`}
+                            >
+                              <CreditCard className="w-4 h-4 mr-1" /> Pay
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => openViewPaymentsDialog(enrollment)}
+                              data-testid={`view-payments-btn-${enrollment.id}`}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {enrollments.length === 0 && (
+                  <div className="text-center py-12 text-slate-500">
+                    {loading ? 'Loading...' : 'No enrollments yet'}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Multi-step Enrollment Dialog */}
+      <Dialog open={enrollDialog} onOpenChange={setEnrollDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Enroll Student - Step {enrollStep} of 4
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex gap-2 mb-4">
+            {[1, 2, 3, 4].map((step) => (
+              <div
+                key={step}
+                className={`flex-1 h-2 rounded-full ${
+                  step <= enrollStep ? 'bg-green-500' : 'bg-slate-200'
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Step 1: Personal Details */}
+          {enrollStep === 1 && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-slate-700">Personal Details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Full Name *</Label>
+                  <Input
+                    value={enrollForm.student_name}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, student_name: e.target.value })}
+                    data-testid="enroll-name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email *</Label>
+                  <Input
+                    type="email"
+                    value={enrollForm.email}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, email: e.target.value })}
+                    data-testid="enroll-email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone *</Label>
+                  <Input
+                    value={enrollForm.phone}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, phone: e.target.value })}
+                    data-testid="enroll-phone"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Date of Birth</Label>
+                  <Input
+                    type="date"
+                    value={enrollForm.date_of_birth}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, date_of_birth: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Gender</Label>
+                  <Select value={enrollForm.gender} onValueChange={(v) => setEnrollForm({ ...enrollForm, gender: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Pincode</Label>
+                  <Input
+                    value={enrollForm.pincode}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, pincode: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Address</Label>
+                <Input
+                  value={enrollForm.address}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, address: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>City</Label>
+                  <Input
+                    value={enrollForm.city}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, city: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>State</Label>
+                  <Input
+                    value={enrollForm.state}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, state: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Academic Details */}
+          {enrollStep === 2 && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-slate-700">Academic Details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Highest Qualification</Label>
+                  <Select 
+                    value={enrollForm.highest_qualification} 
+                    onValueChange={(v) => setEnrollForm({ ...enrollForm, highest_qualification: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select qualification" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10th">10th</SelectItem>
+                      <SelectItem value="12th">12th</SelectItem>
+                      <SelectItem value="Graduate">Graduate</SelectItem>
+                      <SelectItem value="Post Graduate">Post Graduate</SelectItem>
+                      <SelectItem value="Diploma">Diploma</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Passing Year</Label>
+                  <Input
+                    value={enrollForm.passing_year}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, passing_year: e.target.value })}
+                    placeholder="2023"
+                  />
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <Label>Institution Name</Label>
+                  <Input
+                    value={enrollForm.institution_name}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, institution_name: e.target.value })}
+                    placeholder="University/College/School name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Percentage/CGPA</Label>
+                  <Input
+                    type="number"
+                    value={enrollForm.percentage}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, percentage: e.target.value })}
+                    placeholder="85"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Program Details */}
+          {enrollStep === 3 && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-slate-700">Program & Fee Details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Program *</Label>
+                  <Select 
+                    value={enrollForm.program_id} 
+                    onValueChange={(v) => {
+                      const program = programs.find(p => p.id === v);
+                      setEnrollForm({ 
+                        ...enrollForm, 
+                        program_id: v,
+                        fee_quoted: program?.fee?.toString() || enrollForm.fee_quoted
+                      });
+                    }}
+                  >
+                    <SelectTrigger data-testid="enroll-program">
+                      <SelectValue placeholder="Select program" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {programs.map((program) => (
+                        <SelectItem key={program.id} value={program.id}>
+                          {program.name} - ₹{program.fee.toLocaleString()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Enrollment Date *</Label>
+                  <Input
+                    type="date"
+                    value={enrollForm.enrollment_date}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, enrollment_date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Fee Quoted (₹) *</Label>
+                  <Input
+                    type="number"
+                    value={enrollForm.fee_quoted}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, fee_quoted: e.target.value })}
+                    data-testid="enroll-fee"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Discount (%)</Label>
+                  <Input
+                    type="number"
+                    value={enrollForm.discount_percent}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, discount_percent: e.target.value })}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <Card className="bg-green-50 border-green-200">
+                <CardContent className="pt-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-green-700">Final Fee (after discount):</span>
+                    <span className="text-2xl font-bold text-green-700">
+                      ₹{calculateFinalFee().toLocaleString()}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Step 4: Confirmation */}
+          {enrollStep === 4 && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-slate-700">Confirm Enrollment</h3>
+              <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-slate-500">Student Name:</span>
+                    <p className="font-medium">{enrollForm.student_name}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Email:</span>
+                    <p className="font-medium">{enrollForm.email}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Phone:</span>
+                    <p className="font-medium">{enrollForm.phone}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Program:</span>
+                    <p className="font-medium">{programs.find(p => p.id === enrollForm.program_id)?.name}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Fee Quoted:</span>
+                    <p className="font-medium">₹{parseFloat(enrollForm.fee_quoted || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Discount:</span>
+                    <p className="font-medium">{enrollForm.discount_percent || 0}%</p>
+                  </div>
+                </div>
+                <div className="border-t pt-3 mt-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Final Amount to Pay:</span>
+                    <span className="text-xl font-bold text-green-600">
+                      ₹{calculateFinalFee().toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-between pt-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={() => enrollStep > 1 ? setEnrollStep(enrollStep - 1) : setEnrollDialog(false)}
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" /> {enrollStep > 1 ? 'Previous' : 'Cancel'}
+            </Button>
+            {enrollStep < 4 ? (
+              <Button 
+                onClick={() => setEnrollStep(enrollStep + 1)}
+                className="bg-slate-900 hover:bg-slate-800"
+                data-testid="enroll-next"
+              >
+                Next <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleEnrollmentSubmit}
+                className="bg-green-600 hover:bg-green-700"
+                data-testid="enroll-submit"
+              >
+                Complete Enrollment
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Plan Dialog */}
+      <Dialog open={paymentPlanDialog} onOpenChange={setPaymentPlanDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create Payment Plan</DialogTitle>
+          </DialogHeader>
+          {selectedEnrollment && (
+            <div className="space-y-4">
+              <div className="bg-slate-50 p-3 rounded-lg">
+                <p className="text-sm text-slate-600">Student: <span className="font-medium">{selectedEnrollment.student_name}</span></p>
+                <p className="text-sm text-slate-600">Total Fee: <span className="font-bold text-green-600">₹{selectedEnrollment.final_fee?.toLocaleString()}</span></p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Payment Plan Type</Label>
+                <Select value={paymentPlanType} onValueChange={setPaymentPlanType}>
+                  <SelectTrigger data-testid="payment-plan-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="One-time">One-time Payment</SelectItem>
+                    <SelectItem value="Installments">Installments</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {paymentPlanType === 'Installments' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Number of Installments</Label>
+                    <Select value={installmentsCount.toString()} onValueChange={(v) => setInstallmentsCount(parseInt(v))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[2, 3, 4, 5, 6].map((n) => (
+                          <SelectItem key={n} value={n.toString()}>{n} Installments</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Installment Schedule</Label>
+                    <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+                      {installments.map((inst, idx) => (
+                        <div key={idx} className="flex justify-between items-center text-sm">
+                          <span>Installment {inst.installment_number}</span>
+                          <div className="flex items-center gap-3">
+                            <Input
+                              type="number"
+                              value={inst.amount}
+                              onChange={(e) => {
+                                const newInst = [...installments];
+                                newInst[idx].amount = parseInt(e.target.value);
+                                setInstallments(newInst);
+                              }}
+                              className="w-28 h-8"
+                            />
+                            <Input
+                              type="date"
+                              value={inst.due_date}
+                              onChange={(e) => {
+                                const newInst = [...installments];
+                                newInst[idx].due_date = e.target.value;
+                                setInstallments(newInst);
+                              }}
+                              className="w-36 h-8"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setPaymentPlanDialog(false)}>Cancel</Button>
+                <Button onClick={handleCreatePaymentPlan} className="bg-slate-900 hover:bg-slate-800" data-testid="create-plan-btn">
+                  Create Plan
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Record Payment Dialog */}
+      <Dialog open={recordPaymentDialog} onOpenChange={setRecordPaymentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+          </DialogHeader>
+          {selectedEnrollment && existingPaymentPlan && (
+            <div className="space-y-4">
+              <div className="bg-slate-50 p-3 rounded-lg">
+                <p className="text-sm text-slate-600">Student: <span className="font-medium">{selectedEnrollment.student_name}</span></p>
+                <p className="text-sm text-slate-600">Plan Type: <span className="font-medium">{existingPaymentPlan.plan_type}</span></p>
+                <p className="text-sm text-slate-600">Total Amount: <span className="font-bold">₹{existingPaymentPlan.total_amount?.toLocaleString()}</span></p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Amount (₹) *</Label>
+                  <Input
+                    type="number"
+                    value={paymentForm.amount}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                    data-testid="payment-amount"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Payment Mode *</Label>
+                  <Select value={paymentForm.payment_mode} onValueChange={(v) => setPaymentForm({ ...paymentForm, payment_mode: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_MODES.map((mode) => (
+                        <SelectItem key={mode} value={mode}>{mode}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Payment Date *</Label>
+                  <Input
+                    type="date"
+                    value={paymentForm.payment_date}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })}
+                  />
+                </div>
+                {existingPaymentPlan.plan_type === 'Installments' && (
+                  <div className="space-y-2">
+                    <Label>Installment Number</Label>
+                    <Select value={paymentForm.installment_number} onValueChange={(v) => setPaymentForm({ ...paymentForm, installment_number: v })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: existingPaymentPlan.installments_count || 3 }, (_, i) => (
+                          <SelectItem key={i + 1} value={(i + 1).toString()}>Installment {i + 1}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Remarks</Label>
+                <Input
+                  value={paymentForm.remarks}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, remarks: e.target.value })}
+                  placeholder="Additional notes..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setRecordPaymentDialog(false)}>Cancel</Button>
+                <Button onClick={handleRecordPayment} className="bg-green-600 hover:bg-green-700" data-testid="record-payment-submit">
+                  Record Payment
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Payments Dialog */}
+      <Dialog open={viewPaymentsDialog} onOpenChange={setViewPaymentsDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Payment History</DialogTitle>
+          </DialogHeader>
+          {selectedEnrollment && (
+            <div className="space-y-4">
+              <div className="bg-slate-50 p-3 rounded-lg flex justify-between items-center">
+                <div>
+                  <p className="font-medium">{selectedEnrollment.student_name}</p>
+                  <p className="text-sm text-slate-500">{selectedEnrollment.program_name}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-slate-600">Total Fee: ₹{selectedEnrollment.final_fee?.toLocaleString()}</p>
+                  {existingPaymentPlan && (
+                    <p className="text-sm text-green-600 font-medium">
+                      Paid: ₹{enrollmentPayments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Date</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Amount</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Mode</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Inst #</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {enrollmentPayments.map((payment) => (
+                      <tr key={payment.id}>
+                        <td className="px-4 py-2 text-sm">{format(new Date(payment.payment_date), 'dd MMM yyyy')}</td>
+                        <td className="px-4 py-2 text-sm font-semibold text-green-600">₹{payment.amount.toLocaleString()}</td>
+                        <td className="px-4 py-2 text-sm">{payment.payment_mode}</td>
+                        <td className="px-4 py-2 text-sm">{payment.installment_number || '-'}</td>
+                        <td className="px-4 py-2 text-sm text-slate-500">{payment.remarks || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {enrollmentPayments.length === 0 && (
+                  <div className="text-center py-8 text-slate-500">No payments recorded yet</div>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setViewPaymentsDialog(false)}>Close</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default EnrollmentsPage;
