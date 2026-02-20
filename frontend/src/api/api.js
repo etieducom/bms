@@ -73,6 +73,14 @@ export const followupAPI = {
 export const analyticsAPI = {
   getOverview: () => api.get('/analytics/overview'),
   getBranchWise: () => api.get('/analytics/branch-wise'),
+  getMonthlyFinancial: (year) => api.get(`/analytics/financial/monthly${year ? `?year=${year}` : ''}`),
+  getBranchWiseFinancial: () => api.get('/analytics/financial/branch-wise'),
+};
+
+export const resourcesAPI = {
+  getAll: () => api.get('/resources'),
+  create: (data) => api.post('/admin/resources', data),
+  delete: (id) => api.delete(`/admin/resources/${id}`),
 };
 
 export const reportsAPI = {
