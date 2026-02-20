@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { analyticsAPI, leadsAPI } from '@/api/api';
+import { analyticsAPI, leadsAPI, followupAPI } from '@/api/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, TrendingUp, CheckCircle, XCircle, Bell } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 
 const STATUS_COLORS = {
   'New': '#3B82F6',
@@ -15,9 +17,11 @@ const STATUS_COLORS = {
 
 const Dashboard = () => {
   const [analytics, setAnalytics] = useState(null);
-  const [trends, setTrends] = useState([]);
   const [recentLeads, setRecentLeads] = useState([]);
+  const [pendingCount, setPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
     fetchData();
@@ -25,14 +29,22 @@ const Dashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [analyticsRes, trendsRes, leadsRes] = await Promise.all([
+      const promises = [
         analyticsAPI.getOverview(),
-        analyticsAPI.getTrends(),
-        leadsAPI.getAll(),
-      ]);
-      setAnalytics(analyticsRes.data);
-      setTrends(trendsRes.data);
-      setRecentLeads(leadsRes.data.slice(0, 5));
+        leadsAPI.getAll({}),
+      ];
+      
+      if (user.role !== 'Admin') {
+        promises.push(followupAPI.getPendingCount());
+      }
+      
+      const results = await Promise.all(promises);
+      setAnalytics(results[0].data);
+      setRecentLeads(results[1].data.slice(0, 5));
+      
+      if (results[2]) {
+        setPendingCount(results[2].data.count);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -69,6 +81,23 @@ const Dashboard = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {user.role !== 'Admin' && pendingCount > 0 && (
+          <Card 
+            className="border-orange-200 bg-orange-50 shadow-soft hover:shadow-lifted transition-shadow cursor-pointer"
+            onClick={() => navigate('/followups')}
+            data-testid="pending-followups-card"
+          >
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-orange-800">Pending Follow-ups</CardTitle>
+              <Bell className="w-4 h-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-orange-600">{pendingCount}</div>
+              <p className="text-xs text-orange-600 mt-1">Click to view</p>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="border-slate-200 shadow-soft hover:shadow-lifted transition-shadow" data-testid="total-leads-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate-600">Total Leads</CardTitle>
