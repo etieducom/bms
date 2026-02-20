@@ -89,6 +89,28 @@ const EnrollmentsPage = () => {
       setConvertedLeads(convertedRes.data);
       setEnrollments(enrollmentsRes.data);
       setPrograms(programsRes.data);
+
+      // Fetch payment status for each enrollment
+      const statusMap = {};
+      for (const enrollment of enrollmentsRes.data) {
+        try {
+          const [paymentsRes, planRes] = await Promise.all([
+            enrollmentAPI.getEnrollmentPayments(enrollment.id),
+            enrollmentAPI.getPaymentPlan(enrollment.id)
+          ]);
+          const totalPaid = paymentsRes.data.reduce((sum, p) => sum + p.amount, 0);
+          const totalFee = enrollment.final_fee || 0;
+          statusMap[enrollment.id] = {
+            totalPaid,
+            totalFee,
+            hasPlan: !!planRes.data,
+            isPaidFull: totalPaid >= totalFee
+          };
+        } catch {
+          statusMap[enrollment.id] = { totalPaid: 0, totalFee: enrollment.final_fee, hasPlan: false, isPaidFull: false };
+        }
+      }
+      setEnrollmentPaymentStatus(statusMap);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
