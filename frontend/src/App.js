@@ -1,16 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import '@/App.css';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
 import LeadsPage from '@/pages/LeadsPage';
 import AnalyticsPage from '@/pages/AnalyticsPage';
+import PendingFollowups from '@/pages/PendingFollowups';
+import AdminPanel from '@/pages/AdminPanel';
+import ReportsPage from '@/pages/ReportsPage';
 import Layout from '@/components/Layout';
 import { Toaster } from '@/components/ui/sonner';
 
-const PrivateRoute = ({ children }) => {
+const PrivateRoute = ({ children, adminOnly = false }) => {
   const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/login" />;
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  
+  if (!token) return <Navigate to="/login" />;
+  if (adminOnly && user.role !== 'Admin') return <Navigate to="/" />;
+  
+  return children;
 };
 
 function App() {
@@ -46,6 +54,36 @@ function App() {
               <PrivateRoute>
                 <Layout>
                   <AnalyticsPage />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/followups"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <PendingFollowups />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <ReportsPage />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <PrivateRoute adminOnly>
+                <Layout>
+                  <AdminPanel />
                 </Layout>
               </PrivateRoute>
             }

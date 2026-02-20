@@ -34,21 +34,49 @@ export const authAPI = {
   getMe: () => api.get('/auth/me'),
 };
 
+export const adminAPI = {
+  createBranch: (data) => api.post('/admin/branches', data),
+  getBranches: () => api.get('/admin/branches'),
+  createProgram: (data) => api.post('/admin/programs', data),
+  getPrograms: () => api.get('/admin/programs'),
+  updateProgram: (id, data) => api.put(`/admin/programs/${id}`, data),
+  createUser: (data) => api.post('/admin/users', data),
+  getUsers: () => api.get('/admin/users'),
+};
+
 export const leadsAPI = {
-  getAll: () => api.get('/leads'),
+  getAll: (filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.append(key, value);
+    });
+    return api.get(`/leads?${params.toString()}`);
+  },
   getOne: (id) => api.get(`/leads/${id}`),
   create: (data) => api.post('/leads', data),
   update: (id, data) => api.put(`/leads/${id}`, data),
   delete: (id) => api.delete(`/leads/${id}`),
-  addFollowup: (id, note, nextDate) => api.post(`/leads/${id}/followups`, null, {
-    params: { note, next_date: nextDate }
-  }),
   getFollowups: (id) => api.get(`/leads/${id}/followups`),
+};
+
+export const followupAPI = {
+  create: (data) => api.post('/followups', data),
+  getPending: () => api.get('/followups/pending'),
+  getPendingCount: () => api.get('/followups/pending/count'),
+  updateStatus: (id, status) => api.put(`/followups/${id}/status`, null, { params: { status } }),
 };
 
 export const analyticsAPI = {
   getOverview: () => api.get('/analytics/overview'),
-  getTrends: () => api.get('/analytics/trends'),
+};
+
+export const reportsAPI = {
+  generateLeadsReport: (filters = {}) => {
+    const params = new URLSearchParams({ ...filters, format: 'csv' });
+    return api.get(`/reports/leads?${params.toString()}`, {
+      responseType: 'blob'
+    });
+  },
 };
 
 export default api;
