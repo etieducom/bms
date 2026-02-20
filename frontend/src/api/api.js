@@ -84,4 +84,25 @@ export const reportsAPI = {
   },
 };
 
+export const expenseAPI = {
+  createCategory: (data) => api.post('/admin/expense-categories', data),
+  getCategories: () => api.get('/expense-categories'),
+  createExpense: (data) => api.post('/expenses', data),
+  getExpenses: () => api.get('/expenses'),
+};
+
+export const enrollmentAPI = {
+  getConvertedLeads: () => api.get('/leads/converted'),
+  createEnrollment: (data) => api.post('/enrollments', data),
+  getEnrollments: () => api.get('/enrollments'),
+  getEnrollmentPayments: (id) => api.get(`/enrollments/${id}/payments`),
+  getPaymentPlan: (id) => api.get(`/enrollments/${id}/payment-plan`),
+};
+
+export const paymentAPI = {
+  createPaymentPlan: (data) => api.post('/payment-plans', data),
+  createPayment: (data) => api.post('/payments', data),
+  generateReceipt: (paymentId) => api.get(`/payments/${paymentId}/receipt`),
+};
+
 export default api;
