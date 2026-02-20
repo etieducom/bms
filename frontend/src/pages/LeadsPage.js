@@ -42,8 +42,8 @@ const leadSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   email: z.string().email('Valid email required'),
-  program: z.string().min(1, 'Program is required'),
   fee_quoted: z.string().optional(),
+  discount_percent: z.string().optional(),
   payment_plan: z.string().optional(),
   lead_source: z.string().min(1, 'Lead source is required'),
 });
@@ -51,6 +51,7 @@ const leadSchema = z.object({
 const LeadsPage = () => {
   const [leads, setLeads] = useState([]);
   const [filteredLeads, setFilteredLeads] = useState([]);
+  const [programs, setPrograms] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [loading, setLoading] = useState(true);
@@ -59,32 +60,49 @@ const LeadsPage = () => {
   const [followupDialog, setFollowupDialog] = useState(false);
   const [followupLeadId, setFollowupLeadId] = useState(null);
   const [followupNote, setFollowupNote] = useState('');
+  const [followupDate, setFollowupDate] = useState('');
+  const [selectedProgram, setSelectedProgram] = useState('');
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(leadSchema),
   });
 
   useEffect(() => {
-    fetchLeads();
+    fetchData();
   }, []);
 
   useEffect(() => {
     filterLeads();
   }, [leads, searchTerm, statusFilter]);
 
+  const fetchData = async () => {
+    try {
+      const { adminAPI } = await import('@/api/api');
+      const [leadsRes, programsRes] = await Promise.all([
+        leadsAPI.getAll({}),
+        adminAPI.getPrograms()
+      ]);
+      setLeads(leadsRes.data);
+      setPrograms(programsRes.data);
+    } catch (error) {
+      toast.error('Failed to fetch data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchLeads = async () => {
     try {
-      const response = await leadsAPI.getAll();
+      const response = await leadsAPI.getAll({});
       setLeads(response.data);
     } catch (error) {
       toast.error('Failed to fetch leads');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -109,9 +127,16 @@ const LeadsPage = () => {
 
   const onSubmit = async (data) => {
     try {
+      if (!selectedProgram && !editingLead) {
+        toast.error('Please select a program');
+        return;
+      }
+
       const formattedData = {
         ...data,
+        program_id: selectedProgram || data.program_id,
         fee_quoted: data.fee_quoted ? parseFloat(data.fee_quoted) : null,
+        discount_percent: data.discount_percent ? parseFloat(data.discount_percent) : null,
       };
 
       if (editingLead) {
@@ -119,23 +144,27 @@ const LeadsPage = () => {
         toast.success('Lead updated successfully');
       } else {
         await leadsAPI.create(formattedData);
-        toast.success('Lead created successfully! Welcome message sent.');
+        toast.success('Lead created successfully! WhatsApp welcome message sent.');
       }
 
       setDialogOpen(false);
       setEditingLead(null);
+      setSelectedProgram('');
       reset();
       fetchLeads();
     } catch (error) {
+      console.error('Error saving lead:', error);
       toast.error(error.response?.data?.detail || 'Failed to save lead');
     }
   };
 
   const handleEdit = (lead) => {
     setEditingLead(lead);
+    setSelectedProgram(lead.program_id);
     reset({
       ...lead,
       fee_quoted: lead.fee_quoted?.toString() || '',
+      discount_percent: lead.discount_percent?.toString() || '',
     });
     setDialogOpen(true);
   };
@@ -167,15 +196,26 @@ const LeadsPage = () => {
       toast.error('Please enter a followup note');
       return;
     }
+    if (!followupDate) {
+      toast.error('Please select a followup date');
+      return;
+    }
 
     try {
-      await leadsAPI.addFollowup(followupLeadId, followupNote, null);
-      toast.success('Followup added successfully');
+      const { followupAPI } = await import('@/api/api');
+      await followupAPI.create({
+        lead_id: followupLeadId,
+        note: followupNote,
+        followup_date: new Date(followupDate).toISOString(),
+      });
+      toast.success('Follow-up scheduled successfully');
       setFollowupDialog(false);
       setFollowupNote('');
+      setFollowupDate('');
       fetchLeads();
     } catch (error) {
-      toast.error('Failed to add followup');
+      console.error('Error adding followup:', error);
+      toast.error('Failed to add follow-up');
     }
   };
 
