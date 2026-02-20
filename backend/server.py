@@ -366,9 +366,14 @@ async def create_lead(lead: LeadCreate, current_user: User = Depends(get_current
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
     
+    # Use user's branch_id, or require it if user doesn't have one
+    branch_id = current_user.branch_id
+    if not branch_id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=400, detail="User must be assigned to a branch")
+    
     new_lead = Lead(
         **lead.model_dump(),
-        branch_id=current_user.branch_id,
+        branch_id=branch_id or "default",
         counsellor_id=current_user.id,
         program_name=program['name']
     )
@@ -396,7 +401,8 @@ async def get_leads(
 ):
     query = {}
     
-    if current_user.role != UserRole.ADMIN:
+    # Only filter by branch if user is not admin AND has a branch_id
+    if current_user.role != UserRole.ADMIN and current_user.branch_id:
         query["branch_id"] = current_user.branch_id
     
     if status:
