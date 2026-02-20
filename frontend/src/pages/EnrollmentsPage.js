@@ -1046,6 +1046,95 @@ const EnrollmentsPage = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Receipt Dialog */}
+      <Dialog open={receiptDialog} onOpenChange={setReceiptDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Payment Receipt</span>
+              <Button onClick={handlePrintReceipt} className="bg-slate-900 hover:bg-slate-800" data-testid="print-receipt-btn">
+                <Printer className="w-4 h-4 mr-2" /> Print Receipt
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {receiptData && (
+            <div ref={receiptRef} className="receipt">
+              {/* Header */}
+              <div className="text-center border-b-2 border-slate-800 pb-4 mb-4">
+                <h1 className="text-2xl font-bold text-slate-800">{receiptData.institute_name}</h1>
+                <p className="text-sm text-slate-600">{receiptData.institute_tagline}</p>
+                {receiptData.branch_name && (
+                  <p className="text-sm text-slate-500 mt-1">
+                    {receiptData.branch_name} | {receiptData.branch_city}
+                  </p>
+                )}
+                {receiptData.branch_phone && (
+                  <p className="text-xs text-slate-500">Phone: {receiptData.branch_phone}</p>
+                )}
+              </div>
+
+              {/* Receipt Number */}
+              <div className="bg-slate-100 p-3 rounded-lg text-center mb-4">
+                <span className="text-sm text-slate-600">Receipt Number</span>
+                <p className="text-lg font-bold text-slate-800">{receiptData.receipt_number}</p>
+              </div>
+
+              {/* Student Details */}
+              <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                <div className="space-y-2">
+                  <div className="flex justify-between border-b border-slate-200 py-2">
+                    <span className="text-slate-600">Student Name:</span>
+                    <span className="font-semibold">{receiptData.student_name}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-200 py-2">
+                    <span className="text-slate-600">Program:</span>
+                    <span className="font-semibold">{receiptData.program}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-200 py-2">
+                    <span className="text-slate-600">Email:</span>
+                    <span className="font-semibold">{receiptData.student_email}</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between border-b border-slate-200 py-2">
+                    <span className="text-slate-600">Payment Date:</span>
+                    <span className="font-semibold">{receiptData.payment_date}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-200 py-2">
+                    <span className="text-slate-600">Payment Mode:</span>
+                    <span className="font-semibold">{receiptData.payment_mode}</span>
+                  </div>
+                  {receiptData.installment_number && (
+                    <div className="flex justify-between border-b border-slate-200 py-2">
+                      <span className="text-slate-600">Installment #:</span>
+                      <span className="font-semibold">{receiptData.installment_number}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Amount Section */}
+              <div className="bg-green-50 p-4 rounded-lg text-center mt-4">
+                <span className="text-sm text-green-700">Amount Received</span>
+                <p className="text-3xl font-bold text-green-700">₹{receiptData.amount?.toLocaleString()}</p>
+                {receiptData.total_fee > 0 && (
+                  <p className="text-xs text-green-600 mt-1">
+                    Total Course Fee: ₹{receiptData.total_fee?.toLocaleString()}
+                  </p>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="text-center mt-6 pt-4 border-t border-slate-200 text-slate-500 text-xs">
+                <p>This is a computer-generated receipt. No signature required.</p>
+                <p className="mt-1">Thank you for choosing {receiptData.institute_name}!</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
