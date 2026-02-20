@@ -1175,8 +1175,11 @@ async def create_payment(payment: PaymentCreate, current_user: User = Depends(ge
     if current_user.role not in [UserRole.ADMIN, UserRole.FRONT_DESK]:
         raise HTTPException(status_code=403, detail="Only Front Desk Executive can record payments")
     
+    payment_data = payment.model_dump()
+    payment_data.pop('payment_date', None)  # Remove to avoid duplicate argument
+    
     new_payment = Payment(
-        **payment.model_dump(),
+        **payment_data,
         payment_date=datetime.fromisoformat(payment.payment_date).date(),
         created_by=current_user.id
     )
