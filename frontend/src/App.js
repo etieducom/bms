@@ -10,6 +10,7 @@ import AdminPanel from '@/pages/AdminPanel';
 import ReportsPage from '@/pages/ReportsPage';
 import ExpensesPage from '@/pages/ExpensesPage';
 import EnrollmentsPage from '@/pages/EnrollmentsPage';
+import ResourcesPage from '@/pages/ResourcesPage';
 import Layout from '@/components/Layout';
 import { Toaster } from '@/components/ui/sonner';
 
