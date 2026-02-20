@@ -17,6 +17,7 @@ const STATUS_COLORS = {
 
 const Dashboard = () => {
   const [analytics, setAnalytics] = useState(null);
+  const [branchAnalytics, setBranchAnalytics] = useState([]);
   const [recentLeads, setRecentLeads] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -34,7 +35,9 @@ const Dashboard = () => {
         leadsAPI.getAll({}),
       ];
       
-      if (user.role !== 'Admin') {
+      if (user.role === 'Admin') {
+        promises.push(analyticsAPI.getBranchWise());
+      } else if (user.role !== 'Admin') {
         promises.push(followupAPI.getPendingCount());
       }
       
@@ -42,7 +45,9 @@ const Dashboard = () => {
       setAnalytics(results[0].data);
       setRecentLeads(results[1].data.slice(0, 5));
       
-      if (results[2]) {
+      if (user.role === 'Admin') {
+        setBranchAnalytics(results[2].data);
+      } else if (results[2]) {
         setPendingCount(results[2].data.count);
       }
     } catch (error) {
