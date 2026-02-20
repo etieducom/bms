@@ -18,9 +18,37 @@ const AdminPanel = () => {
   const [programDialog, setProgramDialog] = useState(false);
   const [userDialog, setUserDialog] = useState(false);
   
-  const [branchForm, setBranchForm] = useState({ name: '', location: '' });
+  const [branchForm, setBranchForm] = useState({ 
+    name: '', 
+    location: '', 
+    address: '', 
+    city: '', 
+    state: '', 
+    pincode: '',
+    owner_name: '',
+    owner_email: '',
+    owner_phone: '',
+    owner_designation: '',
+    branch_phone: '',
+    branch_email: ''
+  });
   const [programForm, setProgramForm] = useState({ name: '', duration: '', fee: '', max_discount_percent: '' });
-  const [userForm, setUserForm] = useState({ name: '', email: '', password: '', role: 'Counsellor', branch_id: '' });
+  const [userForm, setUserForm] = useState({ 
+    name: '', 
+    email: '', 
+    password: '', 
+    role: 'Counsellor', 
+    branch_id: '',
+    phone: '',
+    alternate_phone: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    date_of_birth: '',
+    designation: '',
+    photo_url: ''
+  });
   const [editingBranch, setEditingBranch] = useState(null);
   const [editingProgram, setEditingProgram] = useState(null);
 
@@ -54,7 +82,11 @@ const AdminPanel = () => {
         toast.success('Branch created successfully');
       }
       setBranchDialog(false);
-      setBranchForm({ name: '', location: '' });
+      setBranchForm({ 
+        name: '', location: '', address: '', city: '', state: '', pincode: '',
+        owner_name: '', owner_email: '', owner_phone: '', owner_designation: '',
+        branch_phone: '', branch_email: ''
+      });
       setEditingBranch(null);
       fetchData();
     } catch (error) {
@@ -170,7 +202,20 @@ const AdminPanel = () => {
                         size="sm"
                         onClick={() => {
                           setEditingBranch(branch);
-                          setBranchForm({ name: branch.name, location: branch.location });
+                          setBranchForm({
+                            name: branch.name,
+                            location: branch.location,
+                            address: branch.address || '',
+                            city: branch.city || '',
+                            state: branch.state || '',
+                            pincode: branch.pincode || '',
+                            owner_name: branch.owner_name || '',
+                            owner_email: branch.owner_email || '',
+                            owner_phone: branch.owner_phone || '',
+                            owner_designation: branch.owner_designation || '',
+                            branch_phone: branch.branch_phone || '',
+                            branch_email: branch.branch_email || ''
+                          });
                           setBranchDialog(true);
                         }}
                         className="h-8 w-8 p-0"
