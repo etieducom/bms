@@ -22,6 +22,9 @@ const Dashboard = () => {
   const [recentLeads, setRecentLeads] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [financialData, setFinancialData] = useState(null);
+  const [branchFinancials, setBranchFinancials] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
