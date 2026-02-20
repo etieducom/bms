@@ -1263,19 +1263,161 @@ async def generate_receipt(payment_id: str, current_user: User = Depends(get_cur
         raise HTTPException(status_code=404, detail="Payment not found")
     
     enrollment = await db.enrollments.find_one({"id": payment['enrollment_id']}, {"_id": 0})
+    branch = await db.branches.find_one({"id": enrollment.get('branch_id')}, {"_id": 0}) if enrollment else None
     
     receipt_data = {
-        "receipt_id": payment_id[:8].upper(),
+        "receipt_number": payment.get('receipt_number', payment_id[:8].upper()),
+        "payment_id": payment_id,
         "payment_date": payment['payment_date'],
-        "student_name": enrollment['student_name'],
-        "program": enrollment['program_name'],
+        "student_name": enrollment['student_name'] if enrollment else 'N/A',
+        "student_email": enrollment.get('email', ''),
+        "student_phone": enrollment.get('phone', ''),
+        "program": enrollment['program_name'] if enrollment else 'N/A',
         "amount": payment['amount'],
         "payment_mode": payment['payment_mode'],
         "installment_number": payment.get('installment_number'),
-        "remarks": payment.get('remarks', '')
+        "remarks": payment.get('remarks', ''),
+        "total_fee": enrollment.get('final_fee', 0) if enrollment else 0,
+        "branch_name": branch.get('name', 'ETI Educom') if branch else 'ETI Educom',
+        "branch_address": branch.get('address', '') if branch else '',
+        "branch_city": branch.get('city', '') if branch else '',
+        "branch_phone": branch.get('branch_phone', '') if branch else '',
+        "institute_name": "ETI Educom",
+        "institute_tagline": "Empowering Education Counselors with Precision Tools"
     }
     
     return receipt_data
+
+# Financial Analytics
+@api_router.get("/analytics/financial/monthly")
+async def get_monthly_financial_analytics(year: int = None, current_user: User = Depends(get_current_user)):
+    """Get monthly income and expense data for charts"""
+    if year is None:
+        year = datetime.now().year
+    
+    # Build query based on user role
+    branch_query = {}
+    if current_user.role != UserRole.ADMIN:
+        branch_query["branch_id"] = current_user.branch_id
+    
+    # Get all payments for the year
+    start_date = f"{year}-01-01"
+    end_date = f"{year}-12-31"
+    
+    # Get payments (income)
+    payments = await db.payments.find({
+        **branch_query,
+        "payment_date": {"$gte": start_date, "$lte": end_date}
+    }, {"_id": 0}).to_list(10000)
+    
+    # Get expenses
+    expenses = await db.expenses.find({
+        **branch_query,
+        "expense_date": {"$gte": start_date, "$lte": end_date}
+    }, {"_id": 0}).to_list(10000)
+    
+    # Aggregate by month
+    monthly_data = {}
+    for month in range(1, 13):
+        month_str = f"{year}-{str(month).zfill(2)}"
+        monthly_data[month_str] = {"month": month, "income": 0, "expenses": 0}
+    
+    for payment in payments:
+        pay_date = payment.get('payment_date', '')
+        if isinstance(pay_date, str):
+            month_key = pay_date[:7]
+        else:
+            month_key = pay_date.strftime('%Y-%m')
+        if month_key in monthly_data:
+            monthly_data[month_key]["income"] += payment.get('amount', 0)
+    
+    for expense in expenses:
+        exp_date = expense.get('expense_date', '')
+        if isinstance(exp_date, str):
+            month_key = exp_date[:7]
+        else:
+            month_key = exp_date.strftime('%Y-%m')
+        if month_key in monthly_data:
+            monthly_data[month_key]["expenses"] += expense.get('amount', 0)
+    
+    # Convert to list sorted by month
+    result = sorted(monthly_data.values(), key=lambda x: x["month"])
+    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    for item in result:
+        item["month_name"] = month_names[item["month"] - 1]
+    
+    return {
+        "year": year,
+        "monthly_data": result,
+        "total_income": sum(p.get('amount', 0) for p in payments),
+        "total_expenses": sum(e.get('amount', 0) for e in expenses)
+    }
+
+@api_router.get("/analytics/financial/branch-wise")
+async def get_branch_wise_financial(current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """Get income and expenses for all branches - Admin only"""
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    
+    branch_financials = []
+    for branch in branches:
+        branch_id = branch["id"]
+        
+        # Get total income from payments
+        payments = await db.payments.find({"branch_id": branch_id}, {"_id": 0, "amount": 1}).to_list(10000)
+        total_income = sum(p.get('amount', 0) for p in payments)
+        
+        # Get total expenses
+        expenses = await db.expenses.find({"branch_id": branch_id}, {"_id": 0, "amount": 1}).to_list(10000)
+        total_expenses = sum(e.get('amount', 0) for e in expenses)
+        
+        # Get enrollments count
+        enrollments_count = await db.enrollments.count_documents({"branch_id": branch_id})
+        
+        branch_financials.append({
+            "branch_id": branch_id,
+            "branch_name": branch["name"],
+            "branch_location": branch.get("location", ""),
+            "total_income": total_income,
+            "total_expenses": total_expenses,
+            "net_profit": total_income - total_expenses,
+            "enrollments_count": enrollments_count
+        })
+    
+    # Sort by income descending
+    branch_financials.sort(key=lambda x: x["total_income"], reverse=True)
+    
+    return branch_financials
+
+# Marketing Resources Management
+@api_router.post("/admin/resources", response_model=MarketingResource)
+async def create_resource(resource: MarketingResourceCreate, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """Create a marketing resource - Admin only"""
+    new_resource = MarketingResource(
+        **resource.model_dump(),
+        created_by=current_user.id
+    )
+    resource_dict = new_resource.model_dump()
+    resource_dict['created_at'] = resource_dict['created_at'].isoformat()
+    
+    await db.marketing_resources.insert_one(resource_dict)
+    return new_resource
+
+@api_router.get("/resources", response_model=List[MarketingResource])
+async def get_resources(current_user: User = Depends(get_current_user)):
+    """Get all marketing resources - accessible to all users"""
+    resources = await db.marketing_resources.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    for res in resources:
+        if isinstance(res.get('created_at'), str):
+            res['created_at'] = datetime.fromisoformat(res['created_at'])
+    return [MarketingResource(**r) for r in resources]
+
+@api_router.delete("/admin/resources/{resource_id}")
+async def delete_resource(resource_id: str, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """Delete a marketing resource - Admin only"""
+    result = await db.marketing_resources.delete_one({"id": resource_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Resource not found")
+    return {"message": "Resource deleted successfully"}
 
 app.include_router(api_router)
 
