@@ -1063,29 +1063,6 @@ async def get_expenses(current_user: User = Depends(get_current_user)):
     return [Expense(**e) for e in expenses]
 
 # Enrollment Management (FDA)
-@api_router.get("/leads/converted")
-async def get_converted_leads(current_user: User = Depends(get_current_user)):
-    """Get converted leads for enrollment - FDA sees only their branch"""
-    query = {"status": LeadStatus.CONVERTED.value}
-    
-    if current_user.role != UserRole.ADMIN:
-        query["branch_id"] = current_user.branch_id
-    
-    # Check if already enrolled
-    enrolled_lead_ids = await db.enrollments.find({}, {"lead_id": 1, "_id": 0}).to_list(1000)
-    enrolled_ids = [e["lead_id"] for e in enrolled_lead_ids]
-    
-    if enrolled_ids:
-        query["id"] = {"$nin": enrolled_ids}
-    
-    leads = await db.leads.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
-    for lead in leads:
-        if isinstance(lead.get('created_at'), str):
-            lead['created_at'] = datetime.fromisoformat(lead['created_at'])
-        if isinstance(lead.get('updated_at'), str):
-            lead['updated_at'] = datetime.fromisoformat(lead['updated_at'])
-    return leads
-
 @api_router.post("/enrollments", response_model=Enrollment)
 async def create_enrollment(enrollment: EnrollmentCreate, current_user: User = Depends(get_current_user)):
     if current_user.role not in [UserRole.ADMIN, UserRole.FRONT_DESK]:
