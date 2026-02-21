@@ -526,6 +526,60 @@ def require_role(allowed_roles: List[UserRole]):
         return current_user
     return role_checker
 
+# Helper function to generate state/city codes
+def generate_state_code(state: str) -> str:
+    """Generate 2-letter state code"""
+    state_map = {
+        "punjab": "PB", "haryana": "HR", "delhi": "DL", "uttar pradesh": "UP",
+        "maharashtra": "MH", "karnataka": "KA", "tamil nadu": "TN", "kerala": "KL",
+        "west bengal": "WB", "gujarat": "GJ", "rajasthan": "RJ", "madhya pradesh": "MP",
+        "andhra pradesh": "AP", "telangana": "TG", "bihar": "BR", "odisha": "OR",
+        "jharkhand": "JH", "chhattisgarh": "CG", "assam": "AS", "himachal pradesh": "HP",
+        "uttarakhand": "UK", "goa": "GA", "jammu and kashmir": "JK", "chandigarh": "CH"
+    }
+    state_lower = state.lower().strip()
+    return state_map.get(state_lower, state[:2].upper())
+
+def generate_city_code(city: str) -> str:
+    """Generate 3-letter city code"""
+    city_clean = city.strip().upper()
+    # Remove spaces and get first 3 consonants or characters
+    consonants = ''.join([c for c in city_clean if c not in 'AEIOU '])
+    if len(consonants) >= 3:
+        return consonants[:3]
+    return city_clean[:3]
+
+async def generate_custom_id(branch_id: str, id_type: str) -> str:
+    """Generate custom ID based on branch state/city codes
+    id_type: 'L' for Lead, 'E' for Enrollment, 'R' for Receipt
+    Returns format: PBPTKL0001
+    """
+    branch = await db.branches.find_one({"id": branch_id}, {"_id": 0})
+    if not branch:
+        return None
+    
+    state_code = branch.get('state_code') or generate_state_code(branch.get('state', 'XX'))
+    city_code = branch.get('city_code') or generate_city_code(branch.get('city', 'XXX'))
+    
+    # Get and increment counter
+    counter_field = {
+        'L': 'lead_counter',
+        'E': 'enrollment_counter', 
+        'R': 'receipt_counter'
+    }.get(id_type, 'lead_counter')
+    
+    result = await db.branches.find_one_and_update(
+        {"id": branch_id},
+        {"$inc": {counter_field: 1}},
+        return_document=True,
+        projection={"_id": 0, counter_field: 1}
+    )
+    
+    counter = result.get(counter_field, 1) if result else 1
+    
+    # Format: PBPTKL0001
+    return f"{state_code}{city_code}{id_type}{counter:04d}"
+
 async def get_whatsapp_settings():
     """Get WhatsApp notification settings"""
     settings = await db.whatsapp_settings.find_one({}, {"_id": 0})
@@ -540,7 +594,7 @@ async def get_whatsapp_settings():
     return WhatsAppSettings(**settings)
 
 async def send_whatsapp_notification(phone_number: str, notification_type: str, template_data: dict):
-    """Send WhatsApp notification if enabled"""
+    """Send WhatsApp notification via MSG91 template API"""
     settings = await get_whatsapp_settings()
     
     if not settings.enabled:
@@ -561,24 +615,71 @@ async def send_whatsapp_notification(phone_number: str, notification_type: str, 
         logging.info(f"WhatsApp notification type '{notification_type}' is disabled")
         return {"success": False, "reason": f"Notification type '{notification_type}' disabled"}
     
-    # Build message based on type
-    messages = {
-        "lead_added": f"Hi {template_data.get('name', '')}, Thank you for your interest in ETI Educom! Our counsellor will contact you shortly.",
-        "demo_booked": f"Hi {template_data.get('name', '')}, Your demo has been scheduled for {template_data.get('date', '')}. We look forward to seeing you!",
-        "demo_completed": f"Hi {template_data.get('name', '')}, Thank you for attending the demo at ETI Educom! We hope you found it informative.",
-        "enrollment_confirmed": f"Congratulations {template_data.get('name', '')}! Your enrollment for {template_data.get('program', '')} at ETI Educom is confirmed. Welcome aboard!",
-        "payment_received": f"Hi {template_data.get('name', '')}, We have received your payment of ₹{template_data.get('amount', 0):,.0f}. Thank you!",
-        "installment_reminder": f"Hi {template_data.get('name', '')}, This is a reminder that your installment of ₹{template_data.get('amount', 0):,.0f} is due on {template_data.get('due_date', '')}."
-    }
+    # Send via MSG91 template API
+    return await send_whatsapp_template(phone_number, template_data.get('name', ''), settings)
+
+async def send_whatsapp_template(phone_number: str, body_value: str, settings: WhatsAppSettings):
+    """Send WhatsApp message via MSG91 Template API"""
+    MSG91_KEY = "354230AManBGHBNB694046f8P1"
     
-    message = messages.get(notification_type, "")
-    if not message:
-        return {"success": False, "reason": "Unknown notification type"}
-    
-    return await send_whatsapp_message(phone_number, message, template_data.get('name', ''))
+    try:
+        url = "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/"
+        
+        headers = {
+            "authkey": MSG91_KEY,
+            "Content-Type": "application/json"
+        }
+        
+        # Format phone number (ensure it has country code)
+        formatted_phone = phone_number.strip()
+        if not formatted_phone.startswith('+'):
+            if not formatted_phone.startswith('91'):
+                formatted_phone = '91' + formatted_phone
+        formatted_phone = formatted_phone.replace('+', '')
+        
+        payload = {
+            "integrated_number": settings.integrated_number,
+            "content_type": "template",
+            "payload": {
+                "messaging_product": "whatsapp",
+                "type": "template",
+                "template": {
+                    "name": settings.template_name,
+                    "language": {
+                        "code": "en",
+                        "policy": "deterministic"
+                    },
+                    "namespace": settings.template_namespace,
+                    "to_and_components": [
+                        {
+                            "to": [formatted_phone],
+                            "components": {
+                                "body_1": {
+                                    "type": "text",
+                                    "value": body_value
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, headers=headers, json=payload, timeout=30.0)
+            logging.info(f"MSG91 WhatsApp API response: {response.status_code} - {response.text}")
+            
+            if response.status_code == 200:
+                return {"success": True, "response": response.json()}
+            else:
+                return {"success": False, "error": response.text}
+                
+    except Exception as e:
+        logging.error(f"Failed to send WhatsApp message: {str(e)}")
+        return {"success": False, "error": str(e)}
 
 async def send_whatsapp_message(phone_number: str, message_text: str, lead_name: str):
-    """Send WhatsApp message via MSG91 API"""
+    """Send WhatsApp message via MSG91 API (legacy text-based)"""
     MSG91_KEY = "354230AManBGHBNB694046f8P1"  # Your MSG91 auth key
     
     if not MSG91_KEY:
