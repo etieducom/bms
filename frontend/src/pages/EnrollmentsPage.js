@@ -247,7 +247,7 @@ const EnrollmentsPage = () => {
 
   const handlePrintReceipt = () => {
     const printWindow = window.open('', '', 'height=900,width=800');
-    const logoUrl = 'https://customer-assets.emergentagent.com/job_4e0bdddc-c844-4374-a91a-dfbddecb14b1/artifacts/x17vbd72_etilogo.png';
+    const logoUrl = 'https://customer-assets.emergentagent.com/job_4e0bdddc-c844-4374-a91a-dfbddecb14b1/artifacts/4ane8ulw_eti%20.png';
     
     const receiptHTML = `
       <div class="receipt-copy">
