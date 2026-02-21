@@ -787,7 +787,18 @@ async def get_me(current_user: User = Depends(get_current_user)):
 # Admin - Branch Management
 @api_router.post("/admin/branches", response_model=Branch)
 async def create_branch(branch: BranchCreate, current_user: User = Depends(require_role([UserRole.ADMIN]))):
-    new_branch = Branch(**branch.model_dump())
+    # Auto-generate state and city codes
+    state_code = generate_state_code(branch.state)
+    city_code = generate_city_code(branch.city)
+    
+    new_branch = Branch(
+        **branch.model_dump(),
+        state_code=state_code,
+        city_code=city_code,
+        lead_counter=0,
+        enrollment_counter=0,
+        receipt_counter=0
+    )
     branch_dict = new_branch.model_dump()
     branch_dict['created_at'] = branch_dict['created_at'].isoformat()
     
