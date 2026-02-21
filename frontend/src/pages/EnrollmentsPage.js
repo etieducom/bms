@@ -43,7 +43,13 @@ const EnrollmentsPage = () => {
     fee_quoted: '',
     discount_percent: '',
     enrollment_date: new Date().toISOString().split('T')[0],
+    student_photo_url: '',
+    aadhar_photo_url: '',
   });
+  
+  // Photo upload state
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingAadhar, setUploadingAadhar] = useState(false);
 
   // Payment plan dialog
   const [paymentPlanDialog, setPaymentPlanDialog] = useState(false);
