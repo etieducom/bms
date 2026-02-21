@@ -2794,6 +2794,34 @@ async def cancel_enrollment(enrollment_id: str, reason: str = "", current_user: 
     
     return {"message": "Enrollment cancelled successfully"}
 
+@api_router.put("/students/{enrollment_id}/status")
+async def update_enrollment_status(enrollment_id: str, status: str, reason: str = "", current_user: User = Depends(get_current_user)):
+    """Update enrollment status (Active, Dropped, Inactive, Cancelled) - Branch Admin only"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only Branch Admin can update enrollment status")
+    
+    allowed_statuses = ["Active", "Dropped", "Inactive", "Cancelled"]
+    if status not in allowed_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Allowed: {', '.join(allowed_statuses)}")
+    
+    enrollment = await db.enrollments.find_one({"id": enrollment_id}, {"_id": 0})
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+    
+    # Branch Admin can only update their branch's enrollments
+    if current_user.role == UserRole.BRANCH_ADMIN and enrollment.get('branch_id') != current_user.branch_id:
+        raise HTTPException(status_code=403, detail="You can only update enrollments from your branch")
+    
+    update_data = {"status": status}
+    if status in ["Dropped", "Cancelled", "Inactive"]:
+        update_data["cancelled_at"] = datetime.now(timezone.utc).isoformat()
+        update_data["cancelled_by"] = current_user.id
+        update_data["cancellation_reason"] = reason
+    
+    await db.enrollments.update_one({"id": enrollment_id}, {"$set": update_data})
+    
+    return {"message": f"Enrollment status updated to {status}"}
+
 # Task Management Endpoints
 @api_router.post("/tasks")
 async def create_task(task: TaskCreate, current_user: User = Depends(get_current_user)):
