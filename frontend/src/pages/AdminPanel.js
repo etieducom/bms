@@ -188,6 +188,41 @@ const AdminPanel = () => {
     }
   };
 
+  const handleDeleteCategory = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this expense category?')) return;
+    try {
+      await expenseAPI.deleteCategory(id);
+      toast.success('Category deleted successfully');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete category');
+    }
+  };
+
+  const handleCreateLeadSource = async (e) => {
+    e.preventDefault();
+    try {
+      await leadSourceAPI.create(leadSourceForm);
+      toast.success('Lead source created successfully');
+      setLeadSourceDialog(false);
+      setLeadSourceForm({ name: '', description: '' });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to create lead source');
+    }
+  };
+
+  const handleDeleteLeadSource = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this lead source?')) return;
+    try {
+      await leadSourceAPI.delete(id);
+      toast.success('Lead source deleted successfully');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete lead source');
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="admin-panel">
       <div>
