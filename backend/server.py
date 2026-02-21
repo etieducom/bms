@@ -1186,6 +1186,149 @@ async def generate_leads_report(
     
     return leads
 
+# Unified Reports Endpoint
+@api_router.get("/reports/generate")
+async def generate_report(
+    report_type: str = "leads",
+    branch_id: Optional[str] = None,
+    status: Optional[str] = None,
+    source: Optional[str] = None,
+    program_id: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    format: str = "csv",
+    current_user: User = Depends(get_current_user)
+):
+    """Generate various types of reports"""
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Determine branch filter
+    branch_filter = {}
+    if current_user.role not in [UserRole.ADMIN]:
+        branch_filter["branch_id"] = current_user.branch_id
+    elif branch_id and branch_id != "All":
+        branch_filter["branch_id"] = branch_id
+    
+    # Date filter helper
+    def get_date_query(date_field):
+        date_query = {}
+        if start_date:
+            date_query["$gte"] = start_date
+        if end_date:
+            date_query["$lte"] = end_date
+        return {date_field: date_query} if date_query else {}
+    
+    if report_type == "leads":
+        query = {**branch_filter, "is_deleted": {"$ne": True}}
+        if status and status != "All":
+            query["status"] = status
+        if source and source != "All":
+            query["lead_source"] = source
+        if program_id and program_id != "All":
+            query["program_id"] = program_id
+        if start_date or end_date:
+            query.update(get_date_query("created_at"))
+        
+        leads = await db.leads.find(query, {"_id": 0}).sort("created_at", -1).to_list(10000)
+        writer.writerow(['Name', 'Email', 'Phone', 'Program', 'Source', 'Status', 'City', 'Fee Quoted', 'Created At'])
+        for lead in leads:
+            writer.writerow([
+                lead.get('name'), lead.get('email'), lead.get('number'),
+                lead.get('program_name'), lead.get('lead_source'), lead.get('status'),
+                lead.get('city', ''), lead.get('fee_quoted', ''), lead.get('created_at', '')
+            ])
+        filename = "leads_report.csv"
+    
+    elif report_type == "enrollments":
+        query = {**branch_filter}
+        if start_date or end_date:
+            query.update(get_date_query("enrollment_date"))
+        
+        enrollments = await db.enrollments.find(query, {"_id": 0}).sort("enrollment_date", -1).to_list(10000)
+        writer.writerow(['Student Name', 'Email', 'Phone', 'Program', 'Final Fee', 'Payment Status', 'Enrollment Date'])
+        for e in enrollments:
+            writer.writerow([
+                e.get('student_name'), e.get('student_email'), e.get('student_phone'),
+                e.get('program_name'), e.get('final_fee', ''), e.get('payment_status', ''),
+                e.get('enrollment_date', '')
+            ])
+        filename = "enrollments_report.csv"
+    
+    elif report_type == "income":
+        query = {**branch_filter}
+        if start_date or end_date:
+            query.update(get_date_query("payment_date"))
+        
+        payments = await db.payments.find(query, {"_id": 0}).sort("payment_date", -1).to_list(10000)
+        writer.writerow(['Receipt #', 'Student Name', 'Program', 'Amount', 'Payment Mode', 'Payment Date', 'Installment #'])
+        for p in payments:
+            writer.writerow([
+                p.get('receipt_number', ''), p.get('student_name', ''), p.get('program_name', ''),
+                p.get('amount', ''), p.get('payment_mode', ''), p.get('payment_date', ''),
+                p.get('installment_number', '')
+            ])
+        filename = "income_report.csv"
+    
+    elif report_type == "expenses":
+        query = {**branch_filter}
+        if start_date or end_date:
+            query.update(get_date_query("expense_date"))
+        
+        expenses = await db.expenses.find(query, {"_id": 0}).sort("expense_date", -1).to_list(10000)
+        writer.writerow(['Date', 'Category', 'Name', 'Amount', 'Payment Mode', 'Remarks'])
+        for e in expenses:
+            writer.writerow([
+                e.get('expense_date', ''), e.get('category_name', ''), e.get('name', ''),
+                e.get('amount', ''), e.get('payment_mode', ''), e.get('remarks', '')
+            ])
+        filename = "expenses_report.csv"
+    
+    elif report_type == "pending_payments":
+        # Get payment plans with pending installments
+        pipeline = [
+            {"$match": {**branch_filter}},
+            {"$lookup": {
+                "from": "enrollments",
+                "localField": "enrollment_id",
+                "foreignField": "id",
+                "as": "enrollment"
+            }},
+            {"$unwind": "$enrollment"},
+            {"$project": {
+                "_id": 0,
+                "student_name": "$enrollment.student_name",
+                "student_phone": "$enrollment.student_phone",
+                "program_name": "$enrollment.program_name",
+                "total_amount": "$total_amount",
+                "paid_amount": "$paid_amount",
+                "remaining": {"$subtract": ["$total_amount", "$paid_amount"]},
+                "payment_type": 1,
+                "installment_count": 1
+            }}
+        ]
+        payment_plans = await db.payment_plans.aggregate(pipeline).to_list(10000)
+        pending = [p for p in payment_plans if p.get('remaining', 0) > 0]
+        
+        writer.writerow(['Student Name', 'Phone', 'Program', 'Total Amount', 'Paid Amount', 'Remaining', 'Payment Type'])
+        for p in pending:
+            writer.writerow([
+                p.get('student_name', ''), p.get('student_phone', ''), p.get('program_name', ''),
+                p.get('total_amount', ''), p.get('paid_amount', ''), p.get('remaining', ''),
+                p.get('payment_type', '')
+            ])
+        filename = "pending_payments_report.csv"
+    
+    else:
+        raise HTTPException(status_code=400, detail="Invalid report type")
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
 # Expense Category Management (Admin)
 @api_router.post("/admin/expense-categories", response_model=ExpenseCategory)
 async def create_expense_category(category: ExpenseCategoryCreate, current_user: User = Depends(require_role([UserRole.ADMIN]))):
