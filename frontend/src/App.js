@@ -14,6 +14,7 @@ import ResourcesPage from '@/pages/ResourcesPage';
 import AllPaymentsPage from '@/pages/AllPaymentsPage';
 import PendingPaymentsPage from '@/pages/PendingPaymentsPage';
 import DeletedLeadsPage from '@/pages/DeletedLeadsPage';
+import StudentsPage from '@/pages/StudentsPage';
 import Layout from '@/components/Layout';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -95,6 +96,14 @@ function App() {
             element={
               <PrivateRoute fdaOnly>
                 <Layout><EnrollmentsPage /></Layout>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/students"
+            element={
+              <PrivateRoute fdaOnly>
+                <Layout><StudentsPage /></Layout>
               </PrivateRoute>
             }
           />
