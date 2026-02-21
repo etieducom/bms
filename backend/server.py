@@ -1322,14 +1322,18 @@ async def update_lead(lead_id: str, lead_update: LeadUpdate, current_user: User 
     
     # Send WhatsApp notifications on status change
     if lead_update.status and lead_update.status != old_status:
-        notification_mapping = {
-            LeadStatus.DEMO_BOOKED: ("demo_booked", {"name": updated_lead_obj.name, "date": "scheduled date", "program": updated_lead_obj.program_name}),
-            LeadStatus.FOLLOW_UP: ("demo_completed", {"name": updated_lead_obj.name, "program": updated_lead_obj.program_name}),
-        }
-        
-        if lead_update.status in notification_mapping:
-            notif_type, template_data = notification_mapping[lead_update.status]
-            await send_whatsapp_notification(updated_lead_obj.number, notif_type, template_data)
+        if lead_update.status == LeadStatus.DEMO_BOOKED:
+            # Send demo booked notification with full details
+            await send_whatsapp_notification(
+                updated_lead_obj.number, 
+                "demo_booked", 
+                {
+                    "name": updated_lead_obj.name,
+                    "demo_date": updated_lead_obj.demo_date or "",
+                    "demo_time": updated_lead_obj.demo_time or "",
+                    "trainer": updated_lead_obj.trainer_name or ""
+                }
+            )
     
     return updated_lead_obj
 
