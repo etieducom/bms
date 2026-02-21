@@ -141,4 +141,16 @@ export const deletedLeadsAPI = {
   getDeleted: () => api.get('/leads/deleted'),
 };
 
+export const studentsAPI = {
+  getAll: () => api.get('/students'),
+  getDetails: (id) => api.get(`/students/${id}`),
+  cancelEnrollment: (id, reason) => api.put(`/students/${id}/cancel`, null, { params: { reason } }),
+};
+
+export const notificationsAPI = {
+  getAll: () => api.get('/notifications'),
+  send: (data) => api.post('/notifications', data),
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
+};
+
 export default api;
