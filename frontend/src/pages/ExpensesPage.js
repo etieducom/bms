@@ -140,6 +140,9 @@ const ExpensesPage = () => {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Amount</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Payment Mode</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Remarks</th>
+                  {canDelete && (
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -155,6 +158,18 @@ const ExpensesPage = () => {
                     <td className="px-4 py-3 text-sm font-semibold">₹{expense.amount.toLocaleString()}</td>
                     <td className="px-4 py-3 text-sm">{expense.payment_mode}</td>
                     <td className="px-4 py-3 text-sm text-slate-500">{expense.remarks || '-'}</td>
+                    {canDelete && (
+                      <td className="px-4 py-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(expense.id)}
+                          data-testid={`delete-expense-${expense.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
