@@ -1945,7 +1945,11 @@ async def create_enrollment(enrollment: EnrollmentCreate, current_user: User = D
     await send_whatsapp_notification(
         new_enrollment.phone,
         "enrollment_confirmed",
-        {"name": new_enrollment.student_name, "program": new_enrollment.program_name}
+        {
+            "name": new_enrollment.student_name, 
+            "enrollment_number": custom_enrollment_id or new_enrollment.id,
+            "course": new_enrollment.program_name
+        }
     )
     
     return new_enrollment
