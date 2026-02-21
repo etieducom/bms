@@ -705,7 +705,7 @@ async def get_leads(
     end_date: Optional[str] = None,
     current_user: User = Depends(get_current_user)
 ):
-    query = {}
+    query = {"is_deleted": {"$ne": True}}  # Exclude soft-deleted leads
     
     # Only filter by branch if user is not admin AND has a branch_id
     if current_user.role != UserRole.ADMIN and current_user.branch_id:
