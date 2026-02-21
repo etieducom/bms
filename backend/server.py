@@ -759,6 +759,22 @@ async def get_converted_leads(current_user: User = Depends(get_current_user)):
             lead['updated_at'] = datetime.fromisoformat(lead['updated_at'])
     return leads
 
+# Deleted Leads - must be before /leads/{lead_id}
+@api_router.get("/leads/deleted", response_model=List[Lead])
+async def get_deleted_leads(current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """Get all soft-deleted leads - Admin only"""
+    query = {"is_deleted": True}
+    
+    leads = await db.leads.find(query, {"_id": 0}).sort("deleted_at", -1).to_list(1000)
+    for lead in leads:
+        if isinstance(lead.get('created_at'), str):
+            lead['created_at'] = datetime.fromisoformat(lead['created_at'])
+        if isinstance(lead.get('updated_at'), str):
+            lead['updated_at'] = datetime.fromisoformat(lead['updated_at'])
+        if isinstance(lead.get('deleted_at'), str):
+            lead['deleted_at'] = datetime.fromisoformat(lead['deleted_at'])
+    return [Lead(**lead) for lead in leads]
+
 @api_router.get("/leads/{lead_id}", response_model=Lead)
 async def get_lead(lead_id: str, current_user: User = Depends(get_current_user)):
     lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
