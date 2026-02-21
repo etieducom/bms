@@ -206,6 +206,7 @@ class LeadUpdate(BaseModel):
 class Lead(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    lead_id: Optional[str] = None  # Custom ID: PBPTKL0001
     name: str
     number: str
     alternate_number: Optional[str] = None
