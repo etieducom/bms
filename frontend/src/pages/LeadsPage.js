@@ -381,7 +381,7 @@ const LeadsPage = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(lead.id)}
+                        onClick={() => handleDelete(lead.id, lead)}
                         data-testid={`delete-button-${lead.id}`}
                       >
                         <Trash2 className="w-4 h-4 text-red-500" />
