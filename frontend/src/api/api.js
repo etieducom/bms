@@ -74,6 +74,16 @@ export const followupAPI = {
   updateStatus: (id, status) => api.put(`/followups/${id}/status`, null, { params: { status } }),
 };
 
+export const uploadAPI = {
+  uploadImage: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/upload/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  }
+};
+
 export const analyticsAPI = {
   getOverview: () => api.get('/analytics/overview'),
   getBranchWise: () => api.get('/analytics/branch-wise'),
