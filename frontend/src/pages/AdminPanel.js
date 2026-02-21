@@ -570,6 +570,158 @@ const AdminPanel = () => {
             )}
           </div>
         </TabsContent>
+
+        {/* WhatsApp Settings Tab */}
+        <TabsContent value="whatsapp" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-semibold">WhatsApp Notifications</h2>
+              <p className="text-slate-600 text-sm mt-1">Configure automated WhatsApp notifications via MSG91</p>
+            </div>
+          </div>
+          
+          <Card className="border-slate-200 shadow-soft" data-testid="whatsapp-settings-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="w-6 h-6 text-green-600" />
+                  <div>
+                    <CardTitle className="text-lg">Master Switch</CardTitle>
+                    <p className="text-sm text-slate-500">Enable or disable all WhatsApp notifications globally</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={whatsappSettings.enabled}
+                  onCheckedChange={(checked) => handleWhatsAppSettingChange('enabled', checked)}
+                  disabled={whatsappLoading}
+                  data-testid="whatsapp-master-switch"
+                />
+              </div>
+            </CardHeader>
+          </Card>
+
+          {whatsappSettings.enabled && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Lead Added Notification */}
+              <Card className="border-slate-200 shadow-soft">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">New Lead Welcome Message</p>
+                      <p className="text-sm text-slate-500">Send welcome message when a new lead is added</p>
+                    </div>
+                    <Switch
+                      checked={whatsappSettings.notify_lead_added}
+                      onCheckedChange={(checked) => handleWhatsAppSettingChange('notify_lead_added', checked)}
+                      disabled={whatsappLoading}
+                      data-testid="whatsapp-lead-added"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Demo Booked Notification */}
+              <Card className="border-slate-200 shadow-soft">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Demo Booked Confirmation</p>
+                      <p className="text-sm text-slate-500">Notify when demo session is scheduled</p>
+                    </div>
+                    <Switch
+                      checked={whatsappSettings.notify_demo_booked}
+                      onCheckedChange={(checked) => handleWhatsAppSettingChange('notify_demo_booked', checked)}
+                      disabled={whatsappLoading}
+                      data-testid="whatsapp-demo-booked"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Demo Completed Notification */}
+              <Card className="border-slate-200 shadow-soft">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Demo Completed Follow-up</p>
+                      <p className="text-sm text-slate-500">Send follow-up message after demo completion</p>
+                    </div>
+                    <Switch
+                      checked={whatsappSettings.notify_demo_completed}
+                      onCheckedChange={(checked) => handleWhatsAppSettingChange('notify_demo_completed', checked)}
+                      disabled={whatsappLoading}
+                      data-testid="whatsapp-demo-completed"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Enrollment Confirmed Notification */}
+              <Card className="border-slate-200 shadow-soft">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Enrollment Confirmation</p>
+                      <p className="text-sm text-slate-500">Welcome message for new enrollments</p>
+                    </div>
+                    <Switch
+                      checked={whatsappSettings.notify_enrollment_confirmed}
+                      onCheckedChange={(checked) => handleWhatsAppSettingChange('notify_enrollment_confirmed', checked)}
+                      disabled={whatsappLoading}
+                      data-testid="whatsapp-enrollment-confirmed"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Payment Received Notification */}
+              <Card className="border-slate-200 shadow-soft">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Payment Receipt</p>
+                      <p className="text-sm text-slate-500">Confirm payment received</p>
+                    </div>
+                    <Switch
+                      checked={whatsappSettings.notify_payment_received}
+                      onCheckedChange={(checked) => handleWhatsAppSettingChange('notify_payment_received', checked)}
+                      disabled={whatsappLoading}
+                      data-testid="whatsapp-payment-received"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Installment Reminder Notification */}
+              <Card className="border-slate-200 shadow-soft">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Payment Reminder</p>
+                      <p className="text-sm text-slate-500">Remind about upcoming installments</p>
+                    </div>
+                    <Switch
+                      checked={whatsappSettings.notify_installment_reminder}
+                      onCheckedChange={(checked) => handleWhatsAppSettingChange('notify_installment_reminder', checked)}
+                      disabled={whatsappLoading}
+                      data-testid="whatsapp-installment-reminder"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {!whatsappSettings.enabled && (
+            <Card className="border-orange-200 bg-orange-50">
+              <CardContent className="pt-6">
+                <p className="text-sm text-orange-700">
+                  WhatsApp notifications are currently disabled. Enable the master switch above to configure individual notification types.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
       </Tabs>
 
       {/* Branch Dialog */}
