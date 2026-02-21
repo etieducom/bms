@@ -688,6 +688,7 @@ const AdminPanel = () => {
             </div>
           </div>
           
+          {/* Master Switch */}
           <Card className="border-slate-200 shadow-soft" data-testid="whatsapp-settings-card">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -709,15 +710,168 @@ const AdminPanel = () => {
           </Card>
 
           {whatsappSettings.enabled && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Lead Added Notification */}
+            <>
+              {/* Template Configuration */}
               <Card className="border-slate-200 shadow-soft">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">New Lead Welcome Message</p>
-                      <p className="text-sm text-slate-500">Send welcome message when a new lead is added</p>
+                <CardHeader>
+                  <CardTitle className="text-lg">Template Configuration</CardTitle>
+                  <p className="text-sm text-slate-500">Configure MSG91 template settings for all notifications</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Integrated WhatsApp Number</Label>
+                      <Input
+                        value={whatsappSettings.integrated_number || ''}
+                        onChange={(e) => handleWhatsAppSettingChange('integrated_number', e.target.value)}
+                        placeholder="918728054145"
+                        data-testid="whatsapp-number-input"
+                      />
+                      <p className="text-xs text-slate-500">Your MSG91 registered WhatsApp number</p>
                     </div>
+                    <div className="space-y-2">
+                      <Label>Default Template Name</Label>
+                      <Input
+                        value={whatsappSettings.default_template_name || ''}
+                        onChange={(e) => handleWhatsAppSettingChange('default_template_name', e.target.value)}
+                        placeholder="crmwelcome"
+                        data-testid="whatsapp-template-name"
+                      />
+                      <p className="text-xs text-slate-500">MSG91 approved template name</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Template Namespace</Label>
+                    <Input
+                      value={whatsappSettings.default_template_namespace || ''}
+                      onChange={(e) => handleWhatsAppSettingChange('default_template_namespace', e.target.value)}
+                      placeholder="73fda5e9_77e9_445f_82ac_9c2e532b32f4"
+                      data-testid="whatsapp-namespace-input"
+                    />
+                    <p className="text-xs text-slate-500">Template namespace from MSG91 dashboard</p>
+                  </div>
+                  
+                  {/* Variable Mapping Info */}
+                  <div className="bg-blue-50 p-4 rounded-lg mt-4">
+                    <p className="text-sm font-medium text-blue-800 mb-2">Template Variables</p>
+                    <p className="text-xs text-blue-700">The following variables are automatically passed to your MSG91 template:</p>
+                    <ul className="text-xs text-blue-600 mt-2 space-y-1 list-disc list-inside">
+                      <li><code className="bg-blue-100 px-1">body_1</code> - Student/Lead Name (for all notifications)</li>
+                      <li><code className="bg-blue-100 px-1">body_2</code> - Program Name / Amount (context-specific)</li>
+                      <li><code className="bg-blue-100 px-1">body_3</code> - Date / Additional Info</li>
+                    </ul>
+                    <p className="text-xs text-blue-700 mt-2">Configure your MSG91 template to accept these variables.</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Notification Toggles */}
+              <Card className="border-slate-200 shadow-soft">
+                <CardHeader>
+                  <CardTitle className="text-lg">Notification Events</CardTitle>
+                  <p className="text-sm text-slate-500">Enable/disable specific notification types</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Lead Added */}
+                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-sm">New Lead Welcome</p>
+                        <p className="text-xs text-slate-500">When a new lead is added</p>
+                      </div>
+                      <Switch
+                        checked={whatsappSettings.notify_lead_added}
+                        onCheckedChange={(checked) => handleWhatsAppSettingChange('notify_lead_added', checked)}
+                        disabled={whatsappLoading}
+                        data-testid="whatsapp-lead-added"
+                      />
+                    </div>
+
+                    {/* Demo Booked */}
+                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-sm">Demo Booked</p>
+                        <p className="text-xs text-slate-500">When demo is scheduled</p>
+                      </div>
+                      <Switch
+                        checked={whatsappSettings.notify_demo_booked}
+                        onCheckedChange={(checked) => handleWhatsAppSettingChange('notify_demo_booked', checked)}
+                        disabled={whatsappLoading}
+                        data-testid="whatsapp-demo-booked"
+                      />
+                    </div>
+
+                    {/* Demo Completed */}
+                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-sm">Demo Completed</p>
+                        <p className="text-xs text-slate-500">After demo completion</p>
+                      </div>
+                      <Switch
+                        checked={whatsappSettings.notify_demo_completed}
+                        onCheckedChange={(checked) => handleWhatsAppSettingChange('notify_demo_completed', checked)}
+                        disabled={whatsappLoading}
+                        data-testid="whatsapp-demo-completed"
+                      />
+                    </div>
+
+                    {/* Enrollment Confirmed */}
+                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-sm">Enrollment Confirmation</p>
+                        <p className="text-xs text-slate-500">Welcome message for enrollments</p>
+                      </div>
+                      <Switch
+                        checked={whatsappSettings.notify_enrollment_confirmed}
+                        onCheckedChange={(checked) => handleWhatsAppSettingChange('notify_enrollment_confirmed', checked)}
+                        disabled={whatsappLoading}
+                        data-testid="whatsapp-enrollment-confirmed"
+                      />
+                    </div>
+
+                    {/* Payment Received */}
+                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-sm">Payment Receipt</p>
+                        <p className="text-xs text-slate-500">When payment is received</p>
+                      </div>
+                      <Switch
+                        checked={whatsappSettings.notify_payment_received}
+                        onCheckedChange={(checked) => handleWhatsAppSettingChange('notify_payment_received', checked)}
+                        disabled={whatsappLoading}
+                        data-testid="whatsapp-payment-received"
+                      />
+                    </div>
+
+                    {/* Installment Reminder */}
+                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-sm">Payment Reminder</p>
+                        <p className="text-xs text-slate-500">Upcoming installment reminders</p>
+                      </div>
+                      <Switch
+                        checked={whatsappSettings.notify_installment_reminder}
+                        onCheckedChange={(checked) => handleWhatsAppSettingChange('notify_installment_reminder', checked)}
+                        disabled={whatsappLoading}
+                        data-testid="whatsapp-installment-reminder"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {!whatsappSettings.enabled && (
+            <Card className="border-orange-200 bg-orange-50">
+              <CardContent className="pt-6">
+                <p className="text-sm text-orange-700">
+                  WhatsApp notifications are currently disabled. Enable the master switch above to configure settings.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
                     <Switch
                       checked={whatsappSettings.notify_lead_added}
                       onCheckedChange={(checked) => handleWhatsAppSettingChange('notify_lead_added', checked)}
