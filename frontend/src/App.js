@@ -79,6 +79,14 @@ function App() {
             }
           />
           <Route
+            path="/tasks"
+            element={
+              <PrivateRoute>
+                <Layout><TasksPage /></Layout>
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/reports"
             element={
               <PrivateRoute>
