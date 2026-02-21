@@ -755,8 +755,24 @@ async def get_whatsapp_settings():
         default_settings['updated_at'] = default_settings['updated_at'].isoformat()
         await db.whatsapp_settings.insert_one(default_settings)
         return WhatsAppSettings()
+    
+    # Ensure the events structure exists and has all required events
+    default_events = WhatsAppSettings().events
+    existing_events = settings.get('events', {})
+    
+    # Merge existing events with defaults (keep user-configured values)
+    merged_events = {}
+    for event_key, default_config in default_events.items():
+        if event_key in existing_events:
+            merged_events[event_key] = {**default_config, **existing_events[event_key]}
+        else:
+            merged_events[event_key] = default_config
+    
+    settings['events'] = merged_events
+    
     if isinstance(settings.get('updated_at'), str):
         settings['updated_at'] = datetime.fromisoformat(settings['updated_at'])
+    
     return WhatsAppSettings(**settings)
 
 async def send_whatsapp_notification(phone_number: str, event_type: str, template_data: dict):
