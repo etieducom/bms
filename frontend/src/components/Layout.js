@@ -88,7 +88,7 @@ const Layout = ({ children }) => {
           >
             {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
-          <h1 className="text-2xl font-bold tracking-tight">ETI Educom</h1>
+          <h1 className="text-2xl font-bold tracking-tight">ETI Educom - Branch Management</h1>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right hidden sm:block">
