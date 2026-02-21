@@ -1187,11 +1187,11 @@ async def create_lead(lead: LeadCreate, current_user: User = Depends(get_current
     
     await db.leads.insert_one(lead_dict)
     
-    # Send WhatsApp notification for new lead
+    # Send WhatsApp notification for new enquiry/lead
     await send_whatsapp_notification(
         new_lead.number, 
-        "lead_added", 
-        {"name": new_lead.name, "program": program['name']}
+        "enquiry_saved",  # Updated event name 
+        {"name": new_lead.name, "course": program['name']}
     )
     
     return new_lead
