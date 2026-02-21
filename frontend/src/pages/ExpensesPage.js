@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const PAYMENT_MODES = ['Cash', 'Card', 'UPI', 'Net Banking', 'Cheque'];
@@ -25,6 +25,10 @@ const ExpensesPage = () => {
     remarks: ''
   });
   const [loading, setLoading] = useState(true);
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isBranchAdmin = user.role === 'Branch Admin';
+  const canDelete = isBranchAdmin; // Only Branch Admin can delete expenses
 
   useEffect(() => {
     fetchData();
