@@ -700,33 +700,52 @@ async def get_whatsapp_settings():
         settings['updated_at'] = datetime.fromisoformat(settings['updated_at'])
     return WhatsAppSettings(**settings)
 
-async def send_whatsapp_notification(phone_number: str, notification_type: str, template_data: dict):
-    """Send WhatsApp notification via MSG91 template API"""
+async def send_whatsapp_notification(phone_number: str, event_type: str, template_data: dict):
+    """Send WhatsApp notification via MSG91 template API with per-event configuration"""
     settings = await get_whatsapp_settings()
     
     if not settings.enabled:
-        logging.info("WhatsApp notifications are disabled")
+        logging.info("WhatsApp notifications are disabled globally")
         return {"success": False, "reason": "Notifications disabled"}
     
-    # Check if specific notification type is enabled
-    type_mapping = {
-        "lead_added": settings.notify_lead_added,
-        "demo_booked": settings.notify_demo_booked,
-        "demo_completed": settings.notify_demo_completed,
-        "enrollment_confirmed": settings.notify_enrollment_confirmed,
-        "payment_received": settings.notify_payment_received,
-        "installment_reminder": settings.notify_installment_reminder
-    }
+    # Get event configuration
+    event_config = settings.events.get(event_type, {})
+    if not event_config:
+        logging.info(f"No configuration found for event '{event_type}'")
+        return {"success": False, "reason": f"Event '{event_type}' not configured"}
     
-    if not type_mapping.get(notification_type, False):
-        logging.info(f"WhatsApp notification type '{notification_type}' is disabled")
-        return {"success": False, "reason": f"Notification type '{notification_type}' disabled"}
+    # Check if this specific event is enabled
+    if not event_config.get('enabled', False):
+        logging.info(f"WhatsApp notification for event '{event_type}' is disabled")
+        return {"success": False, "reason": f"Event '{event_type}' is disabled"}
+    
+    # Check if template is configured
+    template_name = event_config.get('template_name', '')
+    namespace = event_config.get('namespace', '')
+    if not template_name or not namespace:
+        logging.info(f"Template not configured for event '{event_type}'")
+        return {"success": False, "reason": f"Template not configured for '{event_type}'"}
+    
+    # Build component variables based on event type
+    variables = event_config.get('variables', [])
+    components = {}
+    for i, var_name in enumerate(variables, 1):
+        var_value = template_data.get(var_name, '')
+        if var_value:
+            components[f"body_{i}"] = {"type": "text", "value": str(var_value)}
     
     # Send via MSG91 template API
-    return await send_whatsapp_template(phone_number, template_data.get('name', ''), settings)
+    return await send_whatsapp_template_with_config(
+        phone_number=phone_number,
+        template_name=template_name,
+        namespace=namespace,
+        integrated_number=settings.integrated_number,
+        components=components
+    )
 
-async def send_whatsapp_template(phone_number: str, body_value: str, settings: WhatsAppSettings):
-    """Send WhatsApp message via MSG91 Template API"""
+async def send_whatsapp_template_with_config(phone_number: str, template_name: str, namespace: str, 
+                                              integrated_number: str, components: dict):
+    """Send WhatsApp message via MSG91 Template API with full configuration"""
     MSG91_KEY = "354230AManBGHBNB694046f8P1"
     
     try:
@@ -745,18 +764,77 @@ async def send_whatsapp_template(phone_number: str, body_value: str, settings: W
         formatted_phone = formatted_phone.replace('+', '')
         
         payload = {
+            "integrated_number": integrated_number,
+            "content_type": "template",
+            "payload": {
+                "messaging_product": "whatsapp",
+                "type": "template",
+                "template": {
+                    "name": template_name,
+                    "language": {
+                        "code": "en",
+                        "policy": "deterministic"
+                    },
+                    "namespace": namespace,
+                    "to_and_components": [
+                        {
+                            "to": [formatted_phone],
+                            "components": components
+                        }
+                    ]
+                }
+            }
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, headers=headers, json=payload, timeout=30.0)
+            logging.info(f"MSG91 WhatsApp API response: {response.status_code} - {response.text}")
+            
+            if response.status_code == 200:
+                return {"success": True, "response": response.json()}
+            else:
+                return {"success": False, "error": response.text}
+                
+    except Exception as e:
+        logging.error(f"Failed to send WhatsApp message: {str(e)}")
+        return {"success": False, "error": str(e)}
+
+async def send_whatsapp_template(phone_number: str, body_value: str, settings: WhatsAppSettings):
+    """Legacy: Send WhatsApp message via MSG91 Template API (keeping for backwards compatibility)"""
+    MSG91_KEY = "354230AManBGHBNB694046f8P1"
+    
+    try:
+        url = "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/"
+        
+        headers = {
+            "authkey": MSG91_KEY,
+            "Content-Type": "application/json"
+        }
+        
+        # Format phone number (ensure it has country code)
+        formatted_phone = phone_number.strip()
+        if not formatted_phone.startswith('+'):
+            if not formatted_phone.startswith('91'):
+                formatted_phone = '91' + formatted_phone
+        formatted_phone = formatted_phone.replace('+', '')
+        
+        # Use first event's template as default
+        template_name = "crmwelcome"
+        namespace = "73fda5e9_77e9_445f_82ac_9c2e532b32f4"
+        
+        payload = {
             "integrated_number": settings.integrated_number,
             "content_type": "template",
             "payload": {
                 "messaging_product": "whatsapp",
                 "type": "template",
                 "template": {
-                    "name": settings.template_name,
+                    "name": template_name,
                     "language": {
                         "code": "en",
                         "policy": "deterministic"
                     },
-                    "namespace": settings.template_namespace,
+                    "namespace": namespace,
                     "to_and_components": [
                         {
                             "to": [formatted_phone],
