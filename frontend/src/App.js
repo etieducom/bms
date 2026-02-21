@@ -18,6 +18,8 @@ import StudentsPage from '@/pages/StudentsPage';
 import InternationalExamsPage from '@/pages/InternationalExamsPage';
 import ManageExamsPage from '@/pages/ManageExamsPage';
 import TasksPage from '@/pages/TasksPage';
+import QuizExamsPage from '@/pages/QuizExamsPage';
+import PublicExamPage from '@/pages/PublicExamPage';
 import Layout from '@/components/Layout';
 import { Toaster } from '@/components/ui/sonner';
 
