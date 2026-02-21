@@ -272,17 +272,6 @@ const AdminPanel = () => {
     }
   };
 
-  const handleDeleteUser = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
-    try {
-      await adminAPI.deleteUser(id);
-      toast.success('User deleted successfully');
-      fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to delete user');
-    }
-  };
-
   const handleCreateUser = async (e) => {
     e.preventDefault();
     try {
