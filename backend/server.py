@@ -1092,6 +1092,19 @@ async def create_expense_category(category: ExpenseCategoryCreate, current_user:
     await db.expense_categories.insert_one(category_dict)
     return new_category
 
+@api_router.delete("/admin/expense-categories/{category_id}")
+async def delete_expense_category(category_id: str, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """Delete an expense category - Admin only"""
+    # Check if category is used in any expense
+    expense_using = await db.expenses.find_one({"category_id": category_id}, {"_id": 0})
+    if expense_using:
+        raise HTTPException(status_code=400, detail="Cannot delete category - it is being used in expenses")
+    
+    result = await db.expense_categories.delete_one({"id": category_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return {"message": "Category deleted successfully"}
+
 @api_router.get("/expense-categories", response_model=List[ExpenseCategory])
 async def get_expense_categories(current_user: User = Depends(get_current_user)):
     categories = await db.expense_categories.find({}, {"_id": 0}).to_list(1000)
@@ -1099,6 +1112,42 @@ async def get_expense_categories(current_user: User = Depends(get_current_user))
         if isinstance(cat.get('created_at'), str):
             cat['created_at'] = datetime.fromisoformat(cat['created_at'])
     return [ExpenseCategory(**c) for c in categories]
+
+# Lead Sources Management (Admin configurable)
+@api_router.post("/admin/lead-sources", response_model=LeadSource)
+async def create_lead_source(source: LeadSourceCreate, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """Create a new lead source - Admin only"""
+    # Check if source already exists
+    existing = await db.lead_sources.find_one({"name": source.name}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Lead source with this name already exists")
+    
+    new_source = LeadSource(**source.model_dump())
+    source_dict = new_source.model_dump()
+    source_dict['created_at'] = source_dict['created_at'].isoformat()
+    
+    await db.lead_sources.insert_one(source_dict)
+    return new_source
+
+@api_router.get("/lead-sources", response_model=List[LeadSource])
+async def get_lead_sources(current_user: User = Depends(get_current_user)):
+    """Get all active lead sources"""
+    sources = await db.lead_sources.find({"is_active": True}, {"_id": 0}).to_list(100)
+    for src in sources:
+        if isinstance(src.get('created_at'), str):
+            src['created_at'] = datetime.fromisoformat(src['created_at'])
+    return [LeadSource(**s) for s in sources]
+
+@api_router.delete("/admin/lead-sources/{source_id}")
+async def delete_lead_source(source_id: str, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """Delete a lead source - Admin only (soft delete by setting inactive)"""
+    result = await db.lead_sources.update_one(
+        {"id": source_id},
+        {"$set": {"is_active": False}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Lead source not found")
+    return {"message": "Lead source deleted successfully"}
 
 # Expense Management (FDA)
 @api_router.post("/expenses", response_model=Expense)
