@@ -72,6 +72,18 @@ const ExpensesPage = () => {
     }
   };
 
+  const handleDelete = async (expenseId) => {
+    if (!window.confirm('Are you sure you want to delete this expense?')) return;
+    
+    try {
+      await expenseAPI.deleteExpense(expenseId);
+      toast.success('Expense deleted successfully');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete expense');
+    }
+  };
+
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
   return (
