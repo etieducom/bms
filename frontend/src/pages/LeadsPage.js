@@ -175,9 +175,18 @@ const LeadsPage = () => {
   };
 
   const handleDelete = async (id, lead) => {
-    // Check if the current user is the owner or admin
-    if (user.role !== 'Admin' && lead.counsellor_id !== user.id) {
-      toast.error('Only the counsellor who created this lead can delete it');
+    // Only Super Admin or Branch Admin can delete leads
+    // Counsellors and FDEs cannot delete leads
+    const canDelete = user.role === 'Admin' || user.role === 'Branch Admin';
+    
+    if (!canDelete) {
+      toast.error('Only Branch Admin can delete leads');
+      return;
+    }
+    
+    // Branch Admin can only delete leads from their branch
+    if (user.role === 'Branch Admin' && lead.branch_id !== user.branch_id) {
+      toast.error('You can only delete leads from your branch');
       return;
     }
     
@@ -378,14 +387,17 @@ const LeadsPage = () => {
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(lead.id, lead)}
-                        data-testid={`delete-button-${lead.id}`}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
+                      {/* Only Super Admin or Branch Admin can see delete button */}
+                      {(user.role === 'Admin' || user.role === 'Branch Admin') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(lead.id, lead)}
+                          data-testid={`delete-button-${lead.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

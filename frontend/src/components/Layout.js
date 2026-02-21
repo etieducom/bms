@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, BarChart3, LogOut, Menu, X, Bell, FileText, Settings, Folder, CreditCard, Clock, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart3, LogOut, Menu, X, Bell, FileText, Settings, Folder, CreditCard, Clock, Trash2, Wallet, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -13,8 +13,15 @@ const Layout = ({ children }) => {
   const [pendingCount, setPendingCount] = useState(0);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
+  // Role-based navigation flags
+  const isSuperAdmin = user.role === 'Admin';
+  const isBranchAdmin = user.role === 'Branch Admin';
+  const isFDE = user.role === 'Front Desk Executive';
+  const isCounsellor = user.role === 'Counsellor';
+
   useEffect(() => {
-    if (user.role !== 'Admin') {
+    // Only Counsellors need pending followup count (not Admin, not FDE)
+    if (isCounsellor || isBranchAdmin) {
       fetchPendingCount();
       const interval = setInterval(fetchPendingCount, 60000);
       return () => clearInterval(interval);
@@ -32,29 +39,23 @@ const Layout = ({ children }) => {
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', show: true },
-  // Role-based navigation
-  const isSuperAdmin = user.role === 'Admin';
-  const isBranchAdmin = user.role === 'Branch Admin';
-  const isFDE = user.role === 'Front Desk Executive';
-  const isCounsellor = user.role === 'Counsellor';
-
-  const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/', show: true },
     { icon: Users, label: 'Leads', path: '/leads', show: true },
-    // Pending Follow-ups - Not for Super Admin, not for FDE
-    { icon: Bell, label: 'Pending Follow-ups', path: '/followups', show: !isSuperAdmin && !isFDE, badge: pendingCount },
+    // Pending Follow-ups - For Counsellors and Branch Admins only
+    { icon: Bell, label: 'Pending Follow-ups', path: '/followups', show: isCounsellor || isBranchAdmin, badge: pendingCount },
     { icon: BarChart3, label: 'Analytics', path: '/analytics', show: true },
     { icon: FileText, label: 'Reports', path: '/reports', show: true },
-    // Expenses - Only for Branch Admin and FDE (not Super Admin)
-    { icon: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>, label: 'Expenses', path: '/expenses', show: isBranchAdmin || isFDE },
-    // Enrollments - Only for Branch Admin and FDE (not Super Admin)
-    { icon: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>, label: 'Enrollments', path: '/enrollments', show: isBranchAdmin || isFDE },
-    // All Payments - Only for Branch Admin and FDE (not Super Admin)
+    // Expenses - For Branch Admin and FDE
+    { icon: Wallet, label: 'Expenses', path: '/expenses', show: isBranchAdmin || isFDE },
+    // Enrollments - For Branch Admin and FDE
+    { icon: FileSpreadsheet, label: 'Enrollments', path: '/enrollments', show: isBranchAdmin || isFDE },
+    // All Payments - For Branch Admin and FDE
     { icon: CreditCard, label: 'All Payments', path: '/all-payments', show: isBranchAdmin || isFDE },
-    // Pending Payments - Only for Branch Admin and FDE (not Super Admin)
+    // Pending Payments - For Branch Admin and FDE
     { icon: Clock, label: 'Pending Payments', path: '/pending-payments', show: isBranchAdmin || isFDE },
     { icon: Folder, label: 'Resources', path: '/resources', show: true },
-    { icon: Trash2, label: 'Deleted Leads', path: '/deleted-leads', show: isSuperAdmin },
+    // Deleted Leads - For Super Admin and Branch Admin
+    { icon: Trash2, label: 'Deleted Leads', path: '/deleted-leads', show: isSuperAdmin || isBranchAdmin },
+    // Admin Panel - ONLY for Super Admin (Branch Admin should NOT see this)
     { icon: Settings, label: 'Admin Panel', path: '/admin', show: isSuperAdmin },
   ].filter(item => item.show);
 
