@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Search, Filter, Download, CreditCard, Calendar } from 'lucide-react';
+import { Search, Filter, Download, CreditCard, Calendar, Trash2, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const PAYMENT_MODES = ['Cash', 'Card', 'UPI', 'Net Banking', 'Cheque'];
@@ -16,6 +17,14 @@ const AllPaymentsPage = () => {
   const [payments, setPayments] = useState([]);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editDialog, setEditDialog] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [editForm, setEditForm] = useState({
+    amount: '',
+    payment_mode: '',
+    payment_date: '',
+    remarks: ''
+  });
   const [filters, setFilters] = useState({
     start_date: '',
     end_date: '',
@@ -27,6 +36,8 @@ const AllPaymentsPage = () => {
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isAdmin = user.role === 'Admin';
+  const isBranchAdmin = user.role === 'Branch Admin';
+  const canModify = isBranchAdmin; // Only Branch Admin can edit/delete
 
   useEffect(() => {
     fetchData();
