@@ -1341,6 +1341,88 @@ const AdminPanel = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* International Exam Dialog */}
+      <Dialog open={examDialog} onOpenChange={setExamDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add International Exam</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateExam} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Exam Name *</Label>
+              <Input
+                value={examForm.name}
+                onChange={(e) => setExamForm({ ...examForm, name: e.target.value })}
+                placeholder="IELTS, TOEFL, GRE..."
+                required
+                data-testid="exam-name-input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Price (₹) *</Label>
+              <Input
+                type="number"
+                value={examForm.price}
+                onChange={(e) => setExamForm({ ...examForm, price: e.target.value })}
+                placeholder="15000"
+                required
+                data-testid="exam-price-input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <textarea
+                className="w-full min-h-20 px-3 py-2 border border-slate-200 rounded-md"
+                value={examForm.description}
+                onChange={(e) => setExamForm({ ...examForm, description: e.target.value })}
+                placeholder="Brief description of this exam..."
+                data-testid="exam-description-input"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => {
+                setExamDialog(false);
+                setExamForm({ name: '', description: '', price: '' });
+              }}>Cancel</Button>
+              <Button type="submit" className="bg-slate-900 hover:bg-slate-800" data-testid="save-exam-btn">
+                Create Exam
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Change Dialog */}
+      <Dialog open={passwordDialog} onOpenChange={setPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Password for {selectedUser?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>New Password *</Label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (min 6 characters)"
+                data-testid="new-password-input"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setPasswordDialog(false);
+                setNewPassword('');
+                setSelectedUser(null);
+              }}>Cancel</Button>
+              <Button onClick={handleChangePassword} className="bg-slate-900 hover:bg-slate-800">
+                Change Password
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
