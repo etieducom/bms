@@ -75,6 +75,12 @@ export const analyticsAPI = {
   getBranchWise: () => api.get('/analytics/branch-wise'),
   getMonthlyFinancial: (year) => api.get(`/analytics/financial/monthly${year ? `?year=${year}` : ''}`),
   getBranchWiseFinancial: () => api.get('/analytics/financial/branch-wise'),
+  getSuperAdminDashboard: () => api.get('/analytics/super-admin-dashboard'),
+};
+
+export const whatsappAPI = {
+  getSettings: () => api.get('/admin/whatsapp-settings'),
+  updateSettings: (data) => api.put('/admin/whatsapp-settings', data),
 };
 
 export const resourcesAPI = {
