@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, ChevronRight, ChevronLeft, UserPlus, CreditCard, FileText, Eye, Printer, CheckCircle, Clock } from 'lucide-react';
+import { Plus, ChevronRight, ChevronLeft, UserPlus, CreditCard, FileText, Eye, Printer, CheckCircle, Clock, Upload, Image } from 'lucide-react';
 import { format } from 'date-fns';
 
 const PAYMENT_MODES = ['Cash', 'Card', 'UPI', 'Net Banking', 'Cheque'];
