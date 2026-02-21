@@ -535,6 +535,10 @@ class Enrollment(BaseModel):
     state: Optional[str] = None
     pincode: Optional[str] = None
     
+    # Photo uploads
+    student_photo_url: Optional[str] = None
+    aadhar_photo_url: Optional[str] = None
+    
     # Academic Info
     highest_qualification: Optional[str] = None
     institution_name: Optional[str] = None
