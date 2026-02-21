@@ -168,6 +168,28 @@ const EnrollmentsPage = () => {
     }
   };
 
+  const handlePhotoUpload = async (e, type) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (type === 'student') setUploadingPhoto(true);
+    else setUploadingAadhar(true);
+    
+    try {
+      const response = await uploadAPI.uploadImage(file);
+      setEnrollForm(prev => ({
+        ...prev,
+        [type === 'student' ? 'student_photo_url' : 'aadhar_photo_url']: response.data.url
+      }));
+      toast.success(`${type === 'student' ? 'Student photo' : 'Aadhar card'} uploaded successfully`);
+    } catch (error) {
+      toast.error(`Failed to upload ${type === 'student' ? 'photo' : 'Aadhar'}`);
+    } finally {
+      if (type === 'student') setUploadingPhoto(false);
+      else setUploadingAadhar(false);
+    }
+  };
+
   const handleCreatePaymentPlan = async () => {
     try {
       const planData = {
