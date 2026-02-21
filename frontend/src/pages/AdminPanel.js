@@ -135,6 +135,27 @@ const AdminPanel = () => {
     }
   };
 
+  const handleEventSettingChange = async (eventKey, field, value) => {
+    setWhatsappLoading(true);
+    try {
+      const updatedEvents = { 
+        ...whatsappSettings.events,
+        [eventKey]: { 
+          ...whatsappSettings.events[eventKey], 
+          [field]: value 
+        }
+      };
+      const updatedSettings = { ...whatsappSettings, events: updatedEvents };
+      await whatsappAPI.updateSettings(updatedSettings);
+      setWhatsappSettings(updatedSettings);
+      toast.success('Event settings updated');
+    } catch (error) {
+      toast.error('Failed to update event settings');
+    } finally {
+      setWhatsappLoading(false);
+    }
+  };
+
   const handleDeleteUser = async (userId) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
     try {
