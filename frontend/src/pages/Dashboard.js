@@ -95,11 +95,13 @@ const Dashboard = () => {
   }
 
   const statusData = analytics?.status_breakdown
-    ? Object.entries(analytics.status_breakdown).map(([name, value]) => ({
-        name,
-        value,
-        color: STATUS_COLORS[name] || '#94A3B8',
-      }))
+    ? Object.entries(analytics.status_breakdown)
+        .filter(([name]) => name !== 'Deleted') // Exclude deleted from pie chart
+        .map(([name, value]) => ({
+          name,
+          value,
+          color: STATUS_COLORS[name] || '#94A3B8',
+        }))
     : [];
 
   const conversionRate = analytics
