@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { adminAPI, expenseAPI, leadSourceAPI, whatsappAPI } from '@/api/api';
+import { adminAPI, expenseAPI, leadSourceAPI, whatsappAPI, examsAPI } from '@/api/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,8 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Building, Users, BookOpen, Wallet, Trash2, Link, MessageSquare } from 'lucide-react';
+import { Plus, Building, Users, BookOpen, Wallet, Trash2, Link, MessageSquare, Key, UserX, UserCheck, Globe } from 'lucide-react';
 
 const AdminPanel = () => {
   const [branches, setBranches] = useState([]);
@@ -17,8 +18,13 @@ const AdminPanel = () => {
   const [users, setUsers] = useState([]);
   const [expenseCategories, setExpenseCategories] = useState([]);
   const [leadSources, setLeadSources] = useState([]);
+  const [internationalExams, setInternationalExams] = useState([]);
   const [whatsappSettings, setWhatsappSettings] = useState({
     enabled: true,
+    integrated_number: '918728054145',
+    default_template_name: 'crmwelcome',
+    default_template_namespace: '73fda5e9_77e9_445f_82ac_9c2e532b32f4',
+    templates: {},
     notify_lead_added: true,
     notify_demo_booked: true,
     notify_demo_completed: true,
@@ -32,8 +38,13 @@ const AdminPanel = () => {
   const [userDialog, setUserDialog] = useState(false);
   const [categoryDialog, setCategoryDialog] = useState(false);
   const [leadSourceDialog, setLeadSourceDialog] = useState(false);
+  const [examDialog, setExamDialog] = useState(false);
+  const [passwordDialog, setPasswordDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
   const [categoryForm, setCategoryForm] = useState({ name: '', description: '' });
   const [leadSourceForm, setLeadSourceForm] = useState({ name: '', description: '' });
+  const [examForm, setExamForm] = useState({ name: '', description: '', price: '' });
   
   const [branchForm, setBranchForm] = useState({ 
     name: '', 
