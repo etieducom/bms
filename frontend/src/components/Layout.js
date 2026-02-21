@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, BarChart3, LogOut, Menu, X, Bell, FileText, Settings, Folder, CreditCard, Clock, Trash2, Wallet, FileSpreadsheet, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart3, LogOut, Menu, X, Bell, FileText, Settings, Folder, CreditCard, Clock, Trash2, Wallet, FileSpreadsheet, GraduationCap, Globe, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -46,6 +46,10 @@ const Layout = ({ children }) => {
     { icon: FileText, label: 'Reports', path: '/reports', show: true },
     // Students - For Branch Admin and FDE
     { icon: GraduationCap, label: 'Students', path: '/students', show: isBranchAdmin || isFDE },
+    // International Exams - For Branch Admin, Counsellor and FDE
+    { icon: Globe, label: 'International Exams', path: '/international-exams', show: isBranchAdmin || isCounsellor || isFDE },
+    // Manage Exams - For Branch Admin, Counsellor and FDE
+    { icon: ClipboardList, label: 'Manage Exams', path: '/manage-exams', show: isBranchAdmin || isCounsellor || isFDE },
     // Expenses - For Branch Admin and FDE
     { icon: Wallet, label: 'Expenses', path: '/expenses', show: isBranchAdmin || isFDE },
     // Enrollments - For Branch Admin and FDE
