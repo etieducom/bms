@@ -133,7 +133,7 @@ function App() {
           <Route
             path="/deleted-leads"
             element={
-              <PrivateRoute adminOnly>
+              <PrivateRoute fdaOnly>
                 <Layout><DeletedLeadsPage /></Layout>
               </PrivateRoute>
             }
