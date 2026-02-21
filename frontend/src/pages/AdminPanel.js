@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { adminAPI, expenseAPI } from '@/api/api';
+import { adminAPI, expenseAPI, leadSourceAPI } from '@/api/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,18 +8,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Plus, Building, Users, BookOpen, Wallet, Trash2 } from 'lucide-react';
+import { Plus, Building, Users, BookOpen, Wallet, Trash2, Link } from 'lucide-react';
 
 const AdminPanel = () => {
   const [branches, setBranches] = useState([]);
   const [programs, setPrograms] = useState([]);
   const [users, setUsers] = useState([]);
   const [expenseCategories, setExpenseCategories] = useState([]);
+  const [leadSources, setLeadSources] = useState([]);
   const [branchDialog, setBranchDialog] = useState(false);
   const [programDialog, setProgramDialog] = useState(false);
   const [userDialog, setUserDialog] = useState(false);
   const [categoryDialog, setCategoryDialog] = useState(false);
+  const [leadSourceDialog, setLeadSourceDialog] = useState(false);
   const [categoryForm, setCategoryForm] = useState({ name: '', description: '' });
+  const [leadSourceForm, setLeadSourceForm] = useState({ name: '', description: '' });
   
   const [branchForm, setBranchForm] = useState({ 
     name: '', 
