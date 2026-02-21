@@ -640,6 +640,82 @@ const EnrollmentsPage = () => {
                   />
                 </div>
               </div>
+              
+              {/* Photo Uploads */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Image className="w-4 h-4" /> Student Photo
+                  </Label>
+                  {enrollForm.student_photo_url ? (
+                    <div className="relative">
+                      <img 
+                        src={enrollForm.student_photo_url} 
+                        alt="Student" 
+                        className="w-24 h-24 object-cover rounded-lg border"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-2"
+                        onClick={() => setEnrollForm({ ...enrollForm, student_photo_url: '' })}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50">
+                      <Upload className="w-6 h-6 text-slate-400" />
+                      <span className="text-sm text-slate-500 mt-1">
+                        {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handlePhotoUpload(e, 'student')}
+                        disabled={uploadingPhoto}
+                      />
+                    </label>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" /> Aadhar Card Photo
+                  </Label>
+                  {enrollForm.aadhar_photo_url ? (
+                    <div className="relative">
+                      <img 
+                        src={enrollForm.aadhar_photo_url} 
+                        alt="Aadhar" 
+                        className="w-24 h-24 object-cover rounded-lg border"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-2"
+                        onClick={() => setEnrollForm({ ...enrollForm, aadhar_photo_url: '' })}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50">
+                      <Upload className="w-6 h-6 text-slate-400" />
+                      <span className="text-sm text-slate-500 mt-1">
+                        {uploadingAadhar ? 'Uploading...' : 'Upload Aadhar'}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handlePhotoUpload(e, 'aadhar')}
+                        disabled={uploadingAadhar}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
