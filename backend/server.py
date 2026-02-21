@@ -1340,26 +1340,38 @@ async def update_followup_status(followup_id: str, status: FollowUpStatus, curre
 # Analytics
 @api_router.get("/analytics/overview")
 async def get_analytics_overview(current_user: User = Depends(get_current_user)):
-    query = {}
+    # Base query - EXCLUDE deleted leads
+    base_query = {"is_deleted": {"$ne": True}}
     if current_user.role != UserRole.ADMIN:
-        query["branch_id"] = current_user.branch_id
+        base_query["branch_id"] = current_user.branch_id
     
-    total_leads = await db.leads.count_documents(query)
+    # Count active (non-deleted) leads
+    total_leads = await db.leads.count_documents(base_query)
     
+    # Count deleted leads separately
+    deleted_query = {"is_deleted": True}
+    if current_user.role != UserRole.ADMIN:
+        deleted_query["branch_id"] = current_user.branch_id
+    deleted_count = await db.leads.count_documents(deleted_query)
+    
+    # Status counts - only for non-deleted leads
     status_counts = {}
     for lead_status in LeadStatus:
-        count = await db.leads.count_documents({**query, "status": lead_status.value})
+        count = await db.leads.count_documents({**base_query, "status": lead_status.value})
         status_counts[lead_status.value] = count
     
+    # Add deleted count to status breakdown
+    status_counts["Deleted"] = deleted_count
+    
     pipeline = [
-        {"$match": query},
+        {"$match": base_query},
         {"$group": {"_id": "$lead_source", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}}
     ]
     source_stats = await db.leads.aggregate(pipeline).to_list(100)
     
     pipeline = [
-        {"$match": query},
+        {"$match": base_query},
         {"$group": {"_id": "$program_name", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}}
     ]
@@ -1367,6 +1379,7 @@ async def get_analytics_overview(current_user: User = Depends(get_current_user))
     
     return {
         "total_leads": total_leads,
+        "deleted_leads": deleted_count,
         "status_breakdown": status_counts,
         "source_performance": [{"source": s["_id"], "count": s["count"]} for s in source_stats],
         "program_performance": [{"program": p["_id"], "count": p["count"]} for p in program_stats]
@@ -1381,16 +1394,22 @@ async def get_branch_wise_analytics(current_user: User = Depends(require_role([U
     for branch in branches:
         branch_id = branch["id"]
         
-        # Total leads
-        total_leads = await db.leads.count_documents({"branch_id": branch_id})
+        # Base query excludes deleted leads
+        base_query = {"branch_id": branch_id, "is_deleted": {"$ne": True}}
         
-        # Status counts
-        new_count = await db.leads.count_documents({"branch_id": branch_id, "status": "New"})
-        contacted_count = await db.leads.count_documents({"branch_id": branch_id, "status": "Contacted"})
-        demo_count = await db.leads.count_documents({"branch_id": branch_id, "status": "Demo Booked"})
-        followup_count = await db.leads.count_documents({"branch_id": branch_id, "status": "Follow-up"})
-        converted_count = await db.leads.count_documents({"branch_id": branch_id, "status": "Converted"})
-        lost_count = await db.leads.count_documents({"branch_id": branch_id, "status": "Lost"})
+        # Total leads (excluding deleted)
+        total_leads = await db.leads.count_documents(base_query)
+        
+        # Deleted leads count
+        deleted_count = await db.leads.count_documents({"branch_id": branch_id, "is_deleted": True})
+        
+        # Status counts (excluding deleted)
+        new_count = await db.leads.count_documents({**base_query, "status": "New"})
+        contacted_count = await db.leads.count_documents({**base_query, "status": "Contacted"})
+        demo_count = await db.leads.count_documents({**base_query, "status": "Demo Booked"})
+        followup_count = await db.leads.count_documents({**base_query, "status": "Follow-up"})
+        converted_count = await db.leads.count_documents({**base_query, "status": "Converted"})
+        lost_count = await db.leads.count_documents({**base_query, "status": "Lost"})
         
         # Conversion rate
         conversion_rate = (converted_count / total_leads * 100) if total_leads > 0 else 0
@@ -1403,6 +1422,7 @@ async def get_branch_wise_analytics(current_user: User = Depends(require_role([U
             "branch_name": branch["name"],
             "branch_location": branch["location"],
             "total_leads": total_leads,
+            "deleted_leads": deleted_count,
             "new_leads": new_count,
             "contacted": contacted_count,
             "demo_booked": demo_count,
