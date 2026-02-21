@@ -218,6 +218,12 @@ class Lead(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     counsellor_id: str
+    # Soft delete fields
+    is_deleted: bool = False
+    deleted_at: Optional[datetime] = None
+    deleted_by: Optional[str] = None
+    deleted_by_name: Optional[str] = None
+    deletion_reason: Optional[str] = None
 
 class FollowUpCreate(BaseModel):
     lead_id: str
