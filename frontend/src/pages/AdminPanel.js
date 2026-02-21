@@ -22,15 +22,13 @@ const AdminPanel = () => {
   const [whatsappSettings, setWhatsappSettings] = useState({
     enabled: true,
     integrated_number: '918728054145',
-    default_template_name: 'crmwelcome',
-    default_template_namespace: '73fda5e9_77e9_445f_82ac_9c2e532b32f4',
-    templates: {},
-    notify_lead_added: true,
-    notify_demo_booked: true,
-    notify_demo_completed: true,
-    notify_enrollment_confirmed: true,
-    notify_payment_received: true,
-    notify_installment_reminder: true
+    events: {
+      enquiry_saved: { enabled: true, template_name: '', namespace: '', variables: ['name', 'course'], description: 'When a new enquiry/lead is saved' },
+      demo_booked: { enabled: true, template_name: '', namespace: '', variables: ['name', 'demo_date', 'demo_time', 'trainer'], description: 'When demo is scheduled' },
+      enrollment_confirmed: { enabled: true, template_name: '', namespace: '', variables: ['name', 'enrollment_number', 'course'], description: 'Thank you message on enrollment' },
+      fee_reminder: { enabled: true, template_name: '', namespace: '', variables: ['name', 'amount_due', 'due_date'], description: 'Pending fee reminders' },
+      birthday_wishes: { enabled: true, template_name: '', namespace: '', variables: ['name'], description: 'Birthday wishes on DOB' }
+    }
   });
   const [whatsappLoading, setWhatsappLoading] = useState(false);
   const [branchDialog, setBranchDialog] = useState(false);
