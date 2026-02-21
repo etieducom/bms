@@ -2568,6 +2568,178 @@ async def cancel_enrollment(enrollment_id: str, reason: str = "", current_user: 
     
     return {"message": "Enrollment cancelled successfully"}
 
+# Task Management Endpoints
+@api_router.post("/tasks")
+async def create_task(task: TaskCreate, current_user: User = Depends(get_current_user)):
+    """Create a task - Branch Admin only"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only Branch Admin can create tasks")
+    
+    # Get assigned user
+    assigned_user = await db.users.find_one({"id": task.assigned_to}, {"_id": 0, "name": 1, "branch_id": 1})
+    if not assigned_user:
+        raise HTTPException(status_code=404, detail="Assigned user not found")
+    
+    # Branch Admin can only assign to their branch
+    if current_user.role == UserRole.BRANCH_ADMIN and assigned_user.get('branch_id') != current_user.branch_id:
+        raise HTTPException(status_code=403, detail="You can only assign tasks to users in your branch")
+    
+    new_task = Task(
+        title=task.title,
+        description=task.description,
+        assigned_by=current_user.id,
+        assigned_by_name=current_user.name,
+        assigned_to=task.assigned_to,
+        assigned_to_name=assigned_user['name'],
+        branch_id=current_user.branch_id or assigned_user.get('branch_id'),
+        priority=task.priority,
+        due_date=task.due_date
+    )
+    
+    task_dict = new_task.model_dump()
+    task_dict['created_at'] = task_dict['created_at'].isoformat()
+    
+    await db.tasks.insert_one(task_dict)
+    return {"message": "Task created successfully", "task_id": new_task.id}
+
+@api_router.get("/tasks")
+async def get_tasks(current_user: User = Depends(get_current_user)):
+    """Get tasks - assigned to me or created by me"""
+    query = {
+        "$or": [
+            {"assigned_to": current_user.id},
+            {"assigned_by": current_user.id}
+        ]
+    }
+    
+    tasks = await db.tasks.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    for t in tasks:
+        if isinstance(t.get('created_at'), str):
+            t['created_at'] = datetime.fromisoformat(t['created_at'])
+        if isinstance(t.get('completed_at'), str):
+            t['completed_at'] = datetime.fromisoformat(t['completed_at'])
+    return tasks
+
+@api_router.put("/tasks/{task_id}/status")
+async def update_task_status(task_id: str, status: str, current_user: User = Depends(get_current_user)):
+    """Update task status"""
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Only assigned user or creator can update
+    if task['assigned_to'] != current_user.id and task['assigned_by'] != current_user.id:
+        raise HTTPException(status_code=403, detail="You don't have permission to update this task")
+    
+    update_data = {"status": status}
+    if status == "Completed":
+        update_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.tasks.update_one({"id": task_id}, {"$set": update_data})
+    return {"message": "Task status updated successfully"}
+
+# International Exams Management
+@api_router.post("/admin/exams")
+async def create_exam(exam_data: dict, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """Create international exam type - Super Admin only"""
+    new_exam = InternationalExam(
+        name=exam_data['name'],
+        description=exam_data.get('description'),
+        price=exam_data['price']
+    )
+    
+    exam_dict = new_exam.model_dump()
+    exam_dict['created_at'] = exam_dict['created_at'].isoformat()
+    
+    await db.international_exams.insert_one(exam_dict)
+    return new_exam
+
+@api_router.get("/admin/exams")
+async def get_exams(current_user: User = Depends(get_current_user)):
+    """Get all international exam types"""
+    exams = await db.international_exams.find({"is_active": True}, {"_id": 0}).to_list(1000)
+    return exams
+
+@api_router.delete("/admin/exams/{exam_id}")
+async def delete_exam(exam_id: str, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """Delete/deactivate an exam type - Super Admin only"""
+    await db.international_exams.update_one({"id": exam_id}, {"$set": {"is_active": False}})
+    return {"message": "Exam type deleted successfully"}
+
+@api_router.post("/exam-bookings")
+async def create_exam_booking(booking_data: dict, current_user: User = Depends(get_current_user)):
+    """Book an international exam for a student"""
+    if current_user.role == UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Please use a branch account to create bookings")
+    
+    # Get exam details
+    exam = await db.international_exams.find_one({"id": booking_data['exam_id']}, {"_id": 0})
+    if not exam:
+        raise HTTPException(status_code=404, detail="Exam not found")
+    
+    branch_id = current_user.branch_id
+    
+    # Generate custom booking ID
+    custom_booking_id = await generate_custom_id(branch_id, "X")
+    
+    new_booking = ExamBooking(
+        booking_id=custom_booking_id,
+        student_name=booking_data['student_name'],
+        student_phone=booking_data['student_phone'],
+        student_email=booking_data.get('student_email'),
+        exam_id=booking_data['exam_id'],
+        exam_name=exam['name'],
+        exam_price=exam['price'],
+        branch_id=branch_id,
+        exam_date=booking_data.get('exam_date'),
+        notes=booking_data.get('notes'),
+        created_by=current_user.id
+    )
+    
+    booking_dict = new_booking.model_dump()
+    booking_dict['created_at'] = booking_dict['created_at'].isoformat()
+    
+    await db.exam_bookings.insert_one(booking_dict)
+    return new_booking
+
+@api_router.get("/exam-bookings")
+async def get_exam_bookings(current_user: User = Depends(get_current_user)):
+    """Get exam bookings"""
+    query = {}
+    if current_user.role not in [UserRole.ADMIN]:
+        query["branch_id"] = current_user.branch_id
+    
+    bookings = await db.exam_bookings.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    for b in bookings:
+        if isinstance(b.get('created_at'), str):
+            b['created_at'] = datetime.fromisoformat(b['created_at'])
+    return bookings
+
+@api_router.put("/exam-bookings/{booking_id}/status")
+async def update_booking_status(booking_id: str, status: str, current_user: User = Depends(get_current_user)):
+    """Update exam booking status"""
+    booking = await db.exam_bookings.find_one({"id": booking_id}, {"_id": 0})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Check branch access
+    if current_user.role not in [UserRole.ADMIN] and booking.get('branch_id') != current_user.branch_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    await db.exam_bookings.update_one({"id": booking_id}, {"$set": {"status": status}})
+    return {"message": "Booking status updated successfully"}
+
+# Update Branch counter for exam bookings
+async def update_branch_exam_counter(branch_id: str):
+    """Increment the exam booking counter for a branch"""
+    result = await db.branches.find_one_and_update(
+        {"id": branch_id},
+        {"$inc": {"exam_counter": 1}},
+        return_document=True,
+        projection={"_id": 0, "exam_counter": 1}
+    )
+    return result.get('exam_counter', 1) if result else 1
+
 app.include_router(api_router)
 
 app.add_middleware(
