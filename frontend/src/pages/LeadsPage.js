@@ -317,7 +317,7 @@ const LeadsPage = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-sm text-slate-900">{lead.program}</p>
+                    <p className="text-sm font-medium text-slate-900">{lead.program_name || programs.find(p => p.id === lead.program_id)?.name || 'N/A'}</p>
                     {lead.fee_quoted && (
                       <p className="text-sm text-slate-500">₹{lead.fee_quoted}</p>
                     )}
