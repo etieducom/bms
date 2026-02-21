@@ -67,8 +67,10 @@ class TestLeadSources:
     
     def test_create_lead_source(self, headers):
         """Test creating a new lead source"""
+        import uuid
+        unique_id = str(uuid.uuid4())[:8]
         test_source = {
-            "name": "TEST_Instagram_Ads_Iteration3",
+            "name": f"TEST_Instagram_Ads_{unique_id}",
             "description": "Test lead source created for iteration 3 testing"
         }
         response = requests.post(f"{BASE_URL}/api/admin/lead-sources", json=test_source, headers=headers)
@@ -77,14 +79,20 @@ class TestLeadSources:
         assert created["name"] == test_source["name"]
         assert "id" in created
         print(f"SUCCESS: Created lead source: {created['name']} with id: {created['id']}")
-        return created["id"]
     
     def test_create_duplicate_lead_source_fails(self, headers):
         """Test creating duplicate lead source fails"""
+        # First create a source
+        import uuid
+        unique_id = str(uuid.uuid4())[:8]
         test_source = {
-            "name": "TEST_Instagram_Ads_Iteration3",  # Same name as above
-            "description": "Duplicate test"
+            "name": f"TEST_DuplicateTest_{unique_id}",
+            "description": "Initial creation"
         }
+        first_response = requests.post(f"{BASE_URL}/api/admin/lead-sources", json=test_source, headers=headers)
+        assert first_response.status_code == 200, f"First creation should succeed: {first_response.text}"
+        
+        # Now try to create with the same name
         response = requests.post(f"{BASE_URL}/api/admin/lead-sources", json=test_source, headers=headers)
         assert response.status_code == 400, f"Duplicate lead source should fail: {response.text}"
         print("SUCCESS: Duplicate lead source creation correctly rejected")
