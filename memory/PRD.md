@@ -90,6 +90,33 @@ The user, representing a training institute named "ETI Educom", requested a full
   - [x] Counsellor: Leads, Follow-ups, Analytics, Reports, Resources
   - [x] FDE: Expenses, Enrollments, Payments, Resources
 
+### Phase 8: Advanced Features (COMPLETE - February 21, 2026)
+- [x] Dashboard Deleted Leads Fix
+  - [x] Deleted leads now shown as separate count card
+  - [x] Deleted leads excluded from Total Leads count
+  - [x] Deleted leads excluded from status breakdown (Converted, Lost, etc.)
+  - [x] Pie chart excludes "Deleted" status
+- [x] Per-Event WhatsApp Templates (5 Events)
+  - [x] Enquiry Saved - Variables: {name}, {course}
+  - [x] Demo Booked - Variables: {name}, {demo_date}, {demo_time}, {trainer}
+  - [x] Enrollment Confirmed - Variables: {name}, {enrollment_number}, {course}
+  - [x] Fee Reminder - Variables: {name}, {amount_due}, {due_date}
+  - [x] Birthday Wishes - Variables: {name}
+  - [x] Each event has: enabled toggle, template_name, namespace, variables
+- [x] Quiz-Based Exams Module
+  - [x] Super Admin creates MCQ exams (up to 100 questions, 4 options each)
+  - [x] Quiz settings: name, description, duration, pass percentage
+  - [x] FDE can view quizzes and copy shareable links
+  - [x] Public exam page (/exam/:examId) - no auth required
+  - [x] Student enters enrollment number to start exam
+  - [x] Timer countdown with auto-submit
+  - [x] Question navigation with answered status indicators
+  - [x] Pass/Fail result display with score and time taken
+  - [x] All attempts tracked with student details
+- [x] Task Assignment Bug Fix
+  - [x] Branch Admin can now see users in task dropdown
+  - [x] New /api/branch/users endpoint for branch-specific users
+
 ## Pending/Backlog
 
 ### P0 - High Priority
