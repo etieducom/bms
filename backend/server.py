@@ -2251,6 +2251,174 @@ async def update_payment(payment_id: str, payment_update: dict, current_user: Us
     
     return {"message": "Payment updated successfully"}
 
+# Push Notifications Endpoints
+@api_router.post("/notifications")
+async def create_notification(notification: PushNotificationCreate, current_user: User = Depends(get_current_user)):
+    """Create and send a push notification
+    - Super Admin can send to all Branch Admins
+    - Branch Admin can send to FDEs and Counsellors in their branch
+    """
+    recipient_ids = []
+    
+    if current_user.role == UserRole.ADMIN:
+        # Super Admin can send to Branch Admins
+        if notification.recipient_role:
+            users = await db.users.find({"role": notification.recipient_role}, {"_id": 0, "id": 1}).to_list(1000)
+            recipient_ids = [u['id'] for u in users]
+        elif notification.recipient_ids:
+            recipient_ids = notification.recipient_ids
+    elif current_user.role == UserRole.BRANCH_ADMIN:
+        # Branch Admin can only send to their branch's FDEs and Counsellors
+        query = {
+            "branch_id": current_user.branch_id,
+            "role": {"$in": [UserRole.FRONT_DESK.value, UserRole.COUNSELLOR.value]}
+        }
+        if notification.recipient_ids:
+            query["id"] = {"$in": notification.recipient_ids}
+        users = await db.users.find(query, {"_id": 0, "id": 1}).to_list(1000)
+        recipient_ids = [u['id'] for u in users]
+    else:
+        raise HTTPException(status_code=403, detail="Only Admin or Branch Admin can send notifications")
+    
+    if not recipient_ids:
+        raise HTTPException(status_code=400, detail="No recipients found")
+    
+    new_notification = PushNotification(
+        sender_id=current_user.id,
+        sender_name=current_user.name,
+        sender_role=current_user.role.value,
+        recipient_ids=recipient_ids,
+        recipient_role=notification.recipient_role,
+        branch_id=current_user.branch_id,
+        title=notification.title,
+        message=notification.message,
+        notification_type=notification.notification_type
+    )
+    
+    notif_dict = new_notification.model_dump()
+    notif_dict['created_at'] = notif_dict['created_at'].isoformat()
+    
+    await db.notifications.insert_one(notif_dict)
+    return {"message": f"Notification sent to {len(recipient_ids)} recipients", "notification_id": new_notification.id}
+
+@api_router.get("/notifications")
+async def get_my_notifications(current_user: User = Depends(get_current_user)):
+    """Get notifications for the current user"""
+    notifications = await db.notifications.find(
+        {"recipient_ids": current_user.id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    for n in notifications:
+        if isinstance(n.get('created_at'), str):
+            n['created_at'] = datetime.fromisoformat(n['created_at'])
+    
+    return notifications
+
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, current_user: User = Depends(get_current_user)):
+    """Mark a notification as read"""
+    await db.notifications.update_one(
+        {"id": notification_id, "recipient_ids": current_user.id},
+        {"$set": {"is_read": True}}
+    )
+    return {"message": "Notification marked as read"}
+
+# Students (Enrolled) Endpoints
+@api_router.get("/students")
+async def get_students(current_user: User = Depends(get_current_user)):
+    """Get enrolled students with full details"""
+    query = {}
+    if current_user.role not in [UserRole.ADMIN]:
+        query["branch_id"] = current_user.branch_id
+    
+    enrollments = await db.enrollments.find(query, {"_id": 0}).sort("enrollment_date", -1).to_list(1000)
+    
+    students = []
+    for e in enrollments:
+        # Get payment plan info
+        payment_plan = await db.payment_plans.find_one({"enrollment_id": e['id']}, {"_id": 0})
+        
+        # Get payments made
+        payments = await db.payments.find({"enrollment_id": e['id']}, {"_id": 0}).to_list(100)
+        total_paid = sum(p.get('amount', 0) for p in payments)
+        
+        # Calculate pending
+        final_fee = e.get('final_fee', 0)
+        pending_amount = max(0, final_fee - total_paid)
+        
+        # Parse dates
+        if isinstance(e.get('created_at'), str):
+            e['created_at'] = datetime.fromisoformat(e['created_at'])
+        if isinstance(e.get('enrollment_date'), str):
+            e['enrollment_date'] = datetime.fromisoformat(e['enrollment_date']).date()
+        
+        students.append({
+            **e,
+            "total_paid": total_paid,
+            "pending_amount": pending_amount,
+            "payment_plan_type": payment_plan.get('payment_type') if payment_plan else None,
+            "payments_count": len(payments)
+        })
+    
+    return students
+
+@api_router.get("/students/{enrollment_id}")
+async def get_student_details(enrollment_id: str, current_user: User = Depends(get_current_user)):
+    """Get full details of an enrolled student"""
+    enrollment = await db.enrollments.find_one({"id": enrollment_id}, {"_id": 0})
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Check branch access
+    if current_user.role not in [UserRole.ADMIN] and enrollment.get('branch_id') != current_user.branch_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get payment plan
+    payment_plan = await db.payment_plans.find_one({"enrollment_id": enrollment_id}, {"_id": 0})
+    
+    # Get all payments
+    payments = await db.payments.find({"enrollment_id": enrollment_id}, {"_id": 0}).sort("payment_date", -1).to_list(100)
+    total_paid = sum(p.get('amount', 0) for p in payments)
+    
+    # Get branch info
+    branch = await db.branches.find_one({"id": enrollment.get('branch_id')}, {"_id": 0, "name": 1, "location": 1})
+    
+    return {
+        "enrollment": enrollment,
+        "payment_plan": payment_plan,
+        "payments": payments,
+        "total_paid": total_paid,
+        "pending_amount": max(0, enrollment.get('final_fee', 0) - total_paid),
+        "branch": branch
+    }
+
+@api_router.put("/students/{enrollment_id}/cancel")
+async def cancel_enrollment(enrollment_id: str, reason: str = "", current_user: User = Depends(get_current_user)):
+    """Cancel/Drop an enrollment - Branch Admin only"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only Branch Admin can cancel enrollments")
+    
+    enrollment = await db.enrollments.find_one({"id": enrollment_id}, {"_id": 0})
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+    
+    # Branch Admin can only cancel their branch's enrollments
+    if current_user.role == UserRole.BRANCH_ADMIN and enrollment.get('branch_id') != current_user.branch_id:
+        raise HTTPException(status_code=403, detail="You can only cancel enrollments from your branch")
+    
+    await db.enrollments.update_one(
+        {"id": enrollment_id},
+        {"$set": {
+            "status": "Cancelled",
+            "cancelled_at": datetime.now(timezone.utc).isoformat(),
+            "cancelled_by": current_user.id,
+            "cancellation_reason": reason
+        }}
+    )
+    
+    return {"message": "Enrollment cancelled successfully"}
+
 app.include_router(api_router)
 
 app.add_middleware(
