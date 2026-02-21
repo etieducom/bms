@@ -517,18 +517,19 @@ const AdminPanel = () => {
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Photo</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Contact</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Branch</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Photo</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Contact</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Role</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Branch</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4">
+                  <tr key={user.id} className={`hover:bg-slate-50 ${user.is_active === false ? 'opacity-50' : ''}`}>
+                    <td className="px-4 py-3">
                       {user.photo_url ? (
                         <img src={user.photo_url} alt={user.name} className="w-10 h-10 rounded-full object-cover" />
                       ) : (
@@ -539,33 +540,64 @@ const AdminPanel = () => {
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <p className="text-sm font-medium">{user.name}</p>
                       <p className="text-xs text-slate-500">{user.designation || user.role}</p>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <p className="text-sm text-slate-600">{user.email}</p>
                       <p className="text-xs text-slate-500">{user.phone || 'No phone'}</p>
                     </td>
-                    <td className="px-6 py-4 text-sm">
-                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800">
-                        {user.role}
-                      </span>
+                    <td className="px-4 py-3 text-sm">
+                      <Badge className="bg-blue-100 text-blue-800">{user.role}</Badge>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
+                    <td className="px-4 py-3 text-sm text-slate-600">
                       {branches.find(b => b.id === user.branch_id)?.name || 'All'}
                     </td>
-                    <td className="px-6 py-4 text-sm">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </Button>
+                    <td className="px-4 py-3">
+                      {user.is_active === false ? (
+                        <Badge className="bg-red-100 text-red-700">Inactive</Badge>
+                      ) : (
+                        <Badge className="bg-green-100 text-green-700">Active</Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setPasswordDialog(true);
+                          }}
+                          title="Change Password"
+                          data-testid={`change-password-${user.id}`}
+                        >
+                          <Key className="w-4 h-4 text-blue-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleUserStatus(user)}
+                          title={user.is_active === false ? 'Activate User' : 'Deactivate User'}
+                          data-testid={`toggle-status-${user.id}`}
+                        >
+                          {user.is_active === false ? (
+                            <UserCheck className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <UserX className="w-4 h-4 text-orange-500" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteUser(user.id)}
+                          title="Delete User"
+                          data-testid={`delete-user-${user.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
