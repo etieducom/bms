@@ -107,6 +107,30 @@ function App() {
               </PrivateRoute>
             }
           />
+          <Route
+            path="/all-payments"
+            element={
+              <PrivateRoute fdaOnly>
+                <Layout><AllPaymentsPage /></Layout>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/pending-payments"
+            element={
+              <PrivateRoute fdaOnly>
+                <Layout><PendingPaymentsPage /></Layout>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/deleted-leads"
+            element={
+              <PrivateRoute adminOnly>
+                <Layout><DeletedLeadsPage /></Layout>
+              </PrivateRoute>
+            }
+          />
         </Routes>
       </div>
     </BrowserRouter>
