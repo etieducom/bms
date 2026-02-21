@@ -246,30 +246,257 @@ const EnrollmentsPage = () => {
   };
 
   const handlePrintReceipt = () => {
-    const printContent = receiptRef.current;
-    const printWindow = window.open('', '', 'height=600,width=800');
-    printWindow.document.write('<html><head><title>Payment Receipt</title>');
+    const printWindow = window.open('', '', 'height=900,width=800');
+    const logoUrl = 'https://customer-assets.emergentagent.com/job_4e0bdddc-c844-4374-a91a-dfbddecb14b1/artifacts/x17vbd72_etilogo.png';
+    
+    const receiptHTML = `
+      <div class="receipt-copy">
+        <div class="header">
+          <img src="${logoUrl}" alt="ETI Educom" class="logo" onerror="this.style.display='none'"/>
+          <h1>ETI EDUCOM</h1>
+          <p class="tagline">Branch Management System</p>
+          <p class="address">${receiptData?.branch_name || ''} | ${receiptData?.branch_location || ''}</p>
+        </div>
+        
+        <div class="receipt-title">
+          <h2>FEE RECEIPT</h2>
+          <p class="receipt-number">Receipt No: <strong>${receiptData?.receipt_number || 'N/A'}</strong></p>
+          <p class="date">Date: ${receiptData?.payment_date ? new Date(receiptData.payment_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}</p>
+        </div>
+        
+        <div class="student-details">
+          <table>
+            <tr>
+              <td class="label">Student Name:</td>
+              <td class="value">${receiptData?.student_name || ''}</td>
+              <td class="label">Enrollment No:</td>
+              <td class="value">${receiptData?.enrollment_id || ''}</td>
+            </tr>
+            <tr>
+              <td class="label">Course:</td>
+              <td class="value">${receiptData?.program_name || ''}</td>
+              <td class="label">Phone:</td>
+              <td class="value">${receiptData?.phone || ''}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <div class="payment-details">
+          <table>
+            <tr>
+              <td class="label">Payment Mode:</td>
+              <td class="value">${receiptData?.payment_mode || ''}</td>
+            </tr>
+            <tr>
+              <td class="label">Transaction Reference:</td>
+              <td class="value">${receiptData?.transaction_reference || 'N/A'}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <div class="amount-section">
+          <div class="amount-row">
+            <span class="label">Amount Paid:</span>
+            <span class="amount">₹${receiptData?.amount?.toLocaleString('en-IN') || '0'}</span>
+          </div>
+          <p class="amount-words">(Rupees ${receiptData?.amount ? numberToWords(receiptData.amount) : 'Zero'} Only)</p>
+        </div>
+        
+        <div class="fee-summary">
+          <table>
+            <tr>
+              <td>Total Course Fee:</td>
+              <td>₹${receiptData?.total_fee?.toLocaleString('en-IN') || '0'}</td>
+            </tr>
+            <tr>
+              <td>Total Paid (Till Date):</td>
+              <td>₹${receiptData?.total_paid?.toLocaleString('en-IN') || '0'}</td>
+            </tr>
+            <tr class="balance">
+              <td>Balance Due:</td>
+              <td>₹${((receiptData?.total_fee || 0) - (receiptData?.total_paid || 0)).toLocaleString('en-IN')}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <div class="signatures">
+          <div class="signature">
+            <p>Student Signature</p>
+          </div>
+          <div class="signature">
+            <p>Authorized Signatory</p>
+          </div>
+        </div>
+        
+        <div class="copy-label">COPY_TYPE</div>
+      </div>
+    `;
+    
+    const termsHTML = `
+      <div class="terms">
+        <h4>General Terms & Conditions</h4>
+        <ol>
+          <li>Fees once paid are non-refundable and non-transferable under any circumstances.</li>
+          <li>Certificate will be issued only after full fee payment, required attendance, and successful course completion.</li>
+          <li>ETI Educom™ provides placement assistance only. Job placement is not guaranteed.</li>
+          <li>Students must follow institute rules and code of conduct. Violation may lead to termination without refund.</li>
+        </ol>
+      </div>
+    `;
+    
+    printWindow.document.write('<html><head><title>Fee Receipt - ETI Educom</title>');
     printWindow.document.write('<style>');
-    printWindow.document.write(`
-      body { font-family: Arial, sans-serif; padding: 20px; }
-      .receipt { max-width: 600px; margin: 0 auto; border: 2px solid #1e293b; padding: 30px; }
-      .header { text-align: center; border-bottom: 2px solid #1e293b; padding-bottom: 20px; margin-bottom: 20px; }
-      .header h1 { margin: 0; color: #1e293b; font-size: 24px; }
-      .header p { margin: 5px 0; color: #64748b; }
-      .receipt-number { background: #f1f5f9; padding: 10px; text-align: center; margin-bottom: 20px; }
-      .details { margin-bottom: 20px; }
-      .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
-      .label { color: #64748b; }
-      .value { font-weight: 600; }
-      .amount-section { background: #f0fdf4; padding: 15px; text-align: center; margin-top: 20px; }
-      .amount { font-size: 28px; color: #16a34a; font-weight: bold; }
-      .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 12px; }
-    `);
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write(printContent.innerHTML);
+    printWindow.document.write(\`
+      @page { size: A4; margin: 10mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Arial', sans-serif; font-size: 11px; line-height: 1.4; }
+      
+      .receipt-copy {
+        border: 2px solid #1a1a2e;
+        padding: 15px;
+        margin-bottom: 10px;
+        page-break-inside: avoid;
+        position: relative;
+      }
+      
+      .header {
+        text-align: center;
+        border-bottom: 2px solid #1a1a2e;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+      }
+      .header .logo { height: 40px; margin-bottom: 5px; }
+      .header h1 { font-size: 20px; color: #1a1a2e; letter-spacing: 2px; margin: 5px 0; }
+      .header .tagline { font-size: 10px; color: #666; }
+      .header .address { font-size: 9px; color: #888; margin-top: 5px; }
+      
+      .receipt-title {
+        text-align: center;
+        background: #f8f9fa;
+        padding: 8px;
+        margin-bottom: 10px;
+      }
+      .receipt-title h2 { font-size: 14px; color: #1a1a2e; margin-bottom: 5px; }
+      .receipt-title .receipt-number { font-size: 12px; }
+      .receipt-title .date { font-size: 10px; color: #666; }
+      
+      .student-details, .payment-details {
+        margin-bottom: 10px;
+      }
+      .student-details table, .payment-details table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .student-details td, .payment-details td {
+        padding: 4px 8px;
+        border: 1px solid #ddd;
+      }
+      .label { color: #666; width: 20%; font-size: 10px; }
+      .value { font-weight: 600; color: #1a1a2e; }
+      
+      .amount-section {
+        background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
+        color: white;
+        padding: 12px;
+        text-align: center;
+        margin: 10px 0;
+        border-radius: 5px;
+      }
+      .amount-row { display: flex; justify-content: center; align-items: center; gap: 15px; }
+      .amount-row .label { color: #ccc; font-size: 11px; }
+      .amount { font-size: 22px; font-weight: bold; }
+      .amount-words { font-size: 10px; color: #aaa; margin-top: 5px; font-style: italic; }
+      
+      .fee-summary {
+        margin: 10px 0;
+      }
+      .fee-summary table {
+        width: 50%;
+        margin-left: auto;
+        border-collapse: collapse;
+      }
+      .fee-summary td {
+        padding: 4px 8px;
+        border: 1px solid #ddd;
+        font-size: 10px;
+      }
+      .fee-summary .balance { background: #fef3c7; font-weight: bold; }
+      
+      .signatures {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+        padding-top: 30px;
+      }
+      .signature {
+        text-align: center;
+        width: 40%;
+        border-top: 1px solid #333;
+        padding-top: 5px;
+      }
+      .signature p { font-size: 10px; color: #666; }
+      
+      .copy-label {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: #1a1a2e;
+        color: white;
+        padding: 3px 10px;
+        font-size: 9px;
+        font-weight: bold;
+        border-radius: 3px;
+      }
+      
+      .terms {
+        margin-top: 10px;
+        padding: 10px;
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        font-size: 8px;
+      }
+      .terms h4 { font-size: 9px; margin-bottom: 5px; color: #1a1a2e; }
+      .terms ol { padding-left: 15px; color: #666; }
+      .terms li { margin-bottom: 2px; }
+      
+      .divider {
+        border-top: 2px dashed #999;
+        margin: 15px 0;
+        position: relative;
+      }
+      .divider::after {
+        content: '✂ Cut Here';
+        position: absolute;
+        top: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        padding: 0 10px;
+        font-size: 9px;
+        color: #999;
+      }
+    \`);
+    printWindow.document.write('</style>');
+    printWindow.document.write('<script>function numberToWords(num){var a=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];var b=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];if(num===0)return "Zero";if(num<20)return a[num];if(num<100)return b[Math.floor(num/10)]+(num%10?" "+a[num%10]:"");if(num<1000)return a[Math.floor(num/100)]+" Hundred"+(num%100?" and "+numberToWords(num%100):"");if(num<100000)return numberToWords(Math.floor(num/1000))+" Thousand"+(num%1000?" "+numberToWords(num%1000):"");if(num<10000000)return numberToWords(Math.floor(num/100000))+" Lakh"+(num%100000?" "+numberToWords(num%100000):"");return numberToWords(Math.floor(num/10000000))+" Crore"+(num%10000000?" "+numberToWords(num%10000000):"");}</script>');
+    printWindow.document.write('</head><body>');
+    
+    // Student Copy
+    printWindow.document.write(receiptHTML.replace('COPY_TYPE', 'STUDENT COPY'));
+    printWindow.document.write(termsHTML);
+    
+    // Divider
+    printWindow.document.write('<div class="divider"></div>');
+    
+    // Center Copy
+    printWindow.document.write(receiptHTML.replace('COPY_TYPE', 'CENTER COPY'));
+    
     printWindow.document.write('</body></html>');
     printWindow.document.close();
-    printWindow.print();
+    
+    // Wait for images to load before printing
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
   };
 
   const viewReceipt = async (paymentId) => {
