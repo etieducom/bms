@@ -96,6 +96,12 @@ export const reportsAPI = {
       responseType: 'blob'
     });
   },
+  generateReport: (filters = {}) => {
+    const params = new URLSearchParams({ ...filters, format: 'csv' });
+    return api.get(`/reports/generate?${params.toString()}`, {
+      responseType: 'blob'
+    });
+  },
 };
 
 export const expenseAPI = {
