@@ -893,7 +893,7 @@ async def update_lead(lead_id: str, lead_update: LeadUpdate, current_user: User 
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
     
-    if current_user.role != UserRole.ADMIN and lead.get('branch_id') != current_user.branch_id:
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_ADMIN] and lead.get('branch_id') != current_user.branch_id:
         raise HTTPException(status_code=403, detail="Access denied")
     
     old_status = lead.get('status')
@@ -911,17 +911,16 @@ async def update_lead(lead_id: str, lead_update: LeadUpdate, current_user: User 
     
     updated_lead_obj = Lead(**updated_lead)
     
-    # Send WhatsApp on status change
+    # Send WhatsApp notifications on status change
     if lead_update.status and lead_update.status != old_status:
-        messages = {
-            LeadStatus.CONTACTED: f"Hi {updated_lead_obj.name}, thank you for your interest in {updated_lead_obj.program_name}. Our counselor will be in touch with you soon.",
-            LeadStatus.DEMO_BOOKED: f"Hi {updated_lead_obj.name}, your demo session for {updated_lead_obj.program_name} has been booked! We look forward to meeting you.",
-            LeadStatus.CONVERTED: f"Congratulations {updated_lead_obj.name}! Welcome to ETI Educom. We're excited to start your journey in {updated_lead_obj.program_name}.",
-            LeadStatus.LOST: f"Hi {updated_lead_obj.name}, we're sorry we couldn't connect. If you change your mind about {updated_lead_obj.program_name}, we're always here to help!"
+        notification_mapping = {
+            LeadStatus.DEMO_BOOKED: ("demo_booked", {"name": updated_lead_obj.name, "date": "scheduled date", "program": updated_lead_obj.program_name}),
+            LeadStatus.FOLLOW_UP: ("demo_completed", {"name": updated_lead_obj.name, "program": updated_lead_obj.program_name}),
         }
         
-        if lead_update.status in messages:
-            await send_whatsapp_message(updated_lead_obj.number, messages[lead_update.status], updated_lead_obj.name)
+        if lead_update.status in notification_mapping:
+            notif_type, template_data = notification_mapping[lead_update.status]
+            await send_whatsapp_notification(updated_lead_obj.number, notif_type, template_data)
     
     return updated_lead_obj
 
