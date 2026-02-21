@@ -1048,6 +1048,22 @@ async def get_users(current_user: User = Depends(require_role([UserRole.ADMIN]))
     users = await db.users.find({}, {"_id": 0, "hashed_password": 0}).to_list(1000)
     return [UserResponse(**u) for u in users]
 
+@api_router.get("/branch/users", response_model=List[UserResponse])
+async def get_branch_users(current_user: User = Depends(get_current_user)):
+    """Get users in the current user's branch - For Branch Admin task assignment"""
+    if current_user.role == UserRole.ADMIN:
+        # Super Admin sees all users
+        users = await db.users.find({}, {"_id": 0, "hashed_password": 0}).to_list(1000)
+    elif current_user.role == UserRole.BRANCH_ADMIN:
+        # Branch Admin sees users in their branch only
+        users = await db.users.find(
+            {"branch_id": current_user.branch_id}, 
+            {"_id": 0, "hashed_password": 0}
+        ).to_list(1000)
+    else:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    return [UserResponse(**u) for u in users]
+
 # Lead Management
 @api_router.post("/leads", response_model=Lead)
 async def create_lead(lead: LeadCreate, current_user: User = Depends(get_current_user)):
