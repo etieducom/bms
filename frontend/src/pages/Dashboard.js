@@ -110,34 +110,136 @@ const Dashboard = () => {
     <div className="space-y-6 animate-fadeIn" data-testid="dashboard">
       <div>
         <h1 className="text-4xl font-bold tracking-tight mb-2">Dashboard</h1>
-        <p className="text-slate-600">Welcome back! Here's your overview</p>
+        <p className="text-slate-600">
+          {isSuperAdmin ? 'Super Admin Overview - All Branches' : `Welcome back! Here's your ${isBranchAdmin ? 'branch ' : ''}overview`}
+        </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {user.role !== 'Admin' && pendingCount > 0 && (
-          <Card 
-            className="border-orange-200 bg-orange-50 shadow-soft hover:shadow-lifted transition-shadow cursor-pointer"
-            onClick={() => navigate('/followups')}
-            data-testid="pending-followups-card"
-          >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-orange-800">Pending Follow-ups</CardTitle>
-              <Bell className="w-4 h-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-orange-600">{pendingCount}</div>
-              <p className="text-xs text-orange-600 mt-1">Click to view</p>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className="border-slate-200 shadow-soft hover:shadow-lifted transition-shadow" data-testid="total-leads-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Total Leads</CardTitle>
-            <Users className="w-4 h-4 text-slate-400" />
+      {/* Super Admin Branch Performance Overview */}
+      {isSuperAdmin && superAdminData && (
+        <Card className="border-slate-200 shadow-soft" data-testid="super-admin-overview">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold flex items-center gap-2">
+              <Building className="w-5 h-5" /> Branch Performance Overview
+            </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Totals Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-blue-600" />
+                    <span className="text-sm text-blue-700">Total Leads</span>
+                  </div>
+                  <p className="text-2xl font-bold text-blue-700 mt-1">{superAdminData.totals?.total_leads || 0}</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-purple-50 border-purple-200">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-purple-600" />
+                    <span className="text-sm text-purple-700">Total Enrollments</span>
+                  </div>
+                  <p className="text-2xl font-bold text-purple-700 mt-1">{superAdminData.totals?.total_enrollments || 0}</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-green-50 border-green-200">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-green-600" />
+                    <span className="text-sm text-green-700">Total Income</span>
+                  </div>
+                  <p className="text-2xl font-bold text-green-700 mt-1">₹{superAdminData.totals?.total_income?.toLocaleString() || 0}</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-slate-50 border-slate-200">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2">
+                    <Building className="w-5 h-5 text-slate-600" />
+                    <span className="text-sm text-slate-700">Avg Income/Branch</span>
+                  </div>
+                  <p className="text-2xl font-bold text-slate-700 mt-1">₹{superAdminData.totals?.average_income_per_branch?.toLocaleString() || 0}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Branch-wise Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Branch</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Leads</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Enrollments</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Total Income</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Conversion %</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Performance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {superAdminData.branches?.map((branch) => (
+                    <tr key={branch.branch_id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3">
+                        <p className="font-semibold">{branch.branch_name}</p>
+                        <p className="text-xs text-slate-500">{branch.branch_location}</p>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex items-center justify-center w-12 h-8 rounded-md bg-blue-50 text-blue-700 font-semibold">
+                          {branch.leads_count}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex items-center justify-center w-12 h-8 rounded-md bg-purple-50 text-purple-700 font-semibold">
+                          {branch.enrollments_count}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex items-center justify-center px-3 h-8 rounded-md bg-green-50 text-green-700 font-semibold">
+                          ₹{branch.total_income?.toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="font-semibold">{branch.conversion_rate}%</span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {getPerformanceBadge(branch.performance)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Stats Cards - For non-Super Admin */}
+      {!isSuperAdmin && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {pendingCount > 0 && (
+            <Card 
+              className="border-orange-200 bg-orange-50 shadow-soft hover:shadow-lifted transition-shadow cursor-pointer"
+              onClick={() => navigate('/followups')}
+              data-testid="pending-followups-card"
+            >
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-orange-800">Pending Follow-ups</CardTitle>
+                <Bell className="w-4 h-4 text-orange-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-orange-600">{pendingCount}</div>
+                <p className="text-xs text-orange-600 mt-1">Click to view</p>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card className="border-slate-200 shadow-soft hover:shadow-lifted transition-shadow" data-testid="total-leads-card">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-slate-600">Total Leads</CardTitle>
+              <Users className="w-4 h-4 text-slate-400" />
+            </CardHeader>
+            <CardContent>
             <div className="text-3xl font-bold">{analytics?.total_leads || 0}</div>
           </CardContent>
         </Card>
