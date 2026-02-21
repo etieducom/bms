@@ -1286,7 +1286,7 @@ async def create_expense(expense: ExpenseCreate, current_user: User = Depends(ge
 @api_router.get("/expenses", response_model=List[Expense])
 async def get_expenses(current_user: User = Depends(get_current_user)):
     query = {}
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role not in [UserRole.ADMIN]:
         query["branch_id"] = current_user.branch_id
     
     expenses = await db.expenses.find(query, {"_id": 0}).sort("expense_date", -1).to_list(1000)
@@ -1296,6 +1296,23 @@ async def get_expenses(current_user: User = Depends(get_current_user)):
         if isinstance(exp.get('expense_date'), str):
             exp['expense_date'] = datetime.fromisoformat(exp['expense_date']).date()
     return [Expense(**e) for e in expenses]
+
+@api_router.delete("/expenses/{expense_id}")
+async def delete_expense(expense_id: str, current_user: User = Depends(get_current_user)):
+    """Delete an expense - Branch Admin only for their branch"""
+    if current_user.role != UserRole.BRANCH_ADMIN:
+        raise HTTPException(status_code=403, detail="Only Branch Admin can delete expenses")
+    
+    expense = await db.expenses.find_one({"id": expense_id}, {"_id": 0})
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    
+    # Branch Admin can only delete expenses from their branch
+    if expense.get('branch_id') != current_user.branch_id:
+        raise HTTPException(status_code=403, detail="You can only delete expenses from your branch")
+    
+    await db.expenses.delete_one({"id": expense_id})
+    return {"message": "Expense deleted successfully"}
 
 # Enrollment Management (FDA)
 @api_router.post("/enrollments", response_model=Enrollment)
