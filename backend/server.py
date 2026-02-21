@@ -782,9 +782,12 @@ async def create_lead(lead: LeadCreate, current_user: User = Depends(get_current
     
     await db.leads.insert_one(lead_dict)
     
-    # Send WhatsApp welcome message
-    message = f"Hi {new_lead.name}, welcome to ETI Educom! We're excited to help you with {program['name']}. Our team will contact you shortly."
-    await send_whatsapp_message(new_lead.number, message, new_lead.name)
+    # Send WhatsApp notification for new lead
+    await send_whatsapp_notification(
+        new_lead.number, 
+        "lead_added", 
+        {"name": new_lead.name, "program": program['name']}
+    )
     
     return new_lead
 
