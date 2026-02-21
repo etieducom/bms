@@ -63,6 +63,15 @@ const LeadsPage = () => {
   const [followupNote, setFollowupNote] = useState('');
   const [followupDate, setFollowupDate] = useState('');
   const [selectedProgram, setSelectedProgram] = useState('');
+  
+  // Demo Booked dialog state
+  const [demoDialog, setDemoDialog] = useState(false);
+  const [demoLeadId, setDemoLeadId] = useState(null);
+  const [demoForm, setDemoForm] = useState({
+    demo_date: '',
+    demo_time: '',
+    trainer_name: ''
+  });
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
