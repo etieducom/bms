@@ -48,6 +48,8 @@ const Layout = ({ children }) => {
     { icon: FileText, label: 'Reports', path: '/reports', show: true },
     // Students - For Branch Admin and FDE
     { icon: GraduationCap, label: 'Students', path: '/students', show: isBranchAdmin || isFDE },
+    // Quiz Exams - For Super Admin and FDE
+    { icon: BookOpen, label: 'Quiz Exams', path: '/quiz-exams', show: isSuperAdmin || isFDE },
     // International Exams - For Branch Admin, Counsellor and FDE
     { icon: Globe, label: 'International Exams', path: '/international-exams', show: isBranchAdmin || isCounsellor || isFDE },
     // Manage Exams - For Branch Admin, Counsellor and FDE
