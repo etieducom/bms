@@ -442,7 +442,21 @@ const LeadsPage = () => {
               </div>
               <div className="space-y-2">
                 <Label>Lead Source *</Label>
-                <Input {...register('lead_source')} data-testid="lead-source-input" placeholder="Website, Referral, etc." />
+                <Select onValueChange={(value) => setValue('lead_source', value)}>
+                  <SelectTrigger data-testid="lead-source-select">
+                    <SelectValue placeholder="Select lead source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {leadSources.map((source) => (
+                      <SelectItem key={source.id} value={source.name}>
+                        {source.name}
+                      </SelectItem>
+                    ))}
+                    {leadSources.length === 0 && (
+                      <SelectItem value="other" disabled>No sources configured</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
                 {errors.lead_source && <p className="text-xs text-red-500">{errors.lead_source.message}</p>}
               </div>
               <div className="space-y-2">
