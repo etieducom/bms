@@ -216,7 +216,7 @@ const Dashboard = () => {
 
       {/* Stats Cards - For non-Super Admin */}
       {!isSuperAdmin && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {pendingCount > 0 && (
             <Card 
               className="border-orange-200 bg-orange-50 shadow-soft hover:shadow-lifted transition-shadow cursor-pointer"
@@ -277,6 +277,21 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Deleted Leads Card */}
+        {(analytics?.deleted_leads > 0 || analytics?.status_breakdown?.['Deleted'] > 0) && (
+          <Card className="border-slate-300 bg-slate-50 shadow-soft hover:shadow-lifted transition-shadow" data-testid="deleted-leads-card">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-slate-500">Deleted</CardTitle>
+              <Trash2 className="w-4 h-4 text-slate-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-slate-500">
+                {analytics?.deleted_leads || analytics?.status_breakdown?.['Deleted'] || 0}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
       )}
 
