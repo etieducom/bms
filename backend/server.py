@@ -1409,6 +1409,144 @@ async def generate_receipt(payment_id: str, current_user: User = Depends(get_cur
     
     return receipt_data
 
+# All Payments Page with filters
+@api_router.get("/payments/all")
+async def get_all_payments(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    student_name: Optional[str] = None,
+    contact_number: Optional[str] = None,
+    payment_mode: Optional[str] = None,
+    branch_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get all payments with filters"""
+    query = {}
+    
+    # Branch filter based on role
+    if current_user.role != UserRole.ADMIN:
+        query["branch_id"] = current_user.branch_id
+    elif branch_id:
+        query["branch_id"] = branch_id
+    
+    if start_date:
+        query["payment_date"] = {"$gte": start_date}
+    if end_date:
+        if "payment_date" in query:
+            query["payment_date"]["$lte"] = end_date
+        else:
+            query["payment_date"] = {"$lte": end_date}
+    if payment_mode:
+        query["payment_mode"] = payment_mode
+    
+    payments = await db.payments.find(query, {"_id": 0}).sort("payment_date", -1).to_list(10000)
+    
+    # Enrich with enrollment data and filter by student name/contact if provided
+    result = []
+    for pay in payments:
+        enrollment = await db.enrollments.find_one({"id": pay.get('enrollment_id')}, {"_id": 0})
+        if enrollment:
+            pay['student_name'] = enrollment.get('student_name', '')
+            pay['student_email'] = enrollment.get('email', '')
+            pay['student_phone'] = enrollment.get('phone', '')
+            pay['program_name'] = enrollment.get('program_name', '')
+            pay['final_fee'] = enrollment.get('final_fee', 0)
+            
+            # Filter by student name if provided
+            if student_name and student_name.lower() not in pay['student_name'].lower():
+                continue
+            # Filter by contact number if provided
+            if contact_number and contact_number not in pay.get('student_phone', ''):
+                continue
+        
+        if isinstance(pay.get('created_at'), str):
+            pay['created_at'] = datetime.fromisoformat(pay['created_at'])
+        if isinstance(pay.get('payment_date'), str):
+            pay['payment_date'] = datetime.fromisoformat(pay['payment_date']).date()
+        
+        result.append(pay)
+    
+    return result
+
+# Pending Payments (Upcoming Installments)
+@api_router.get("/payments/pending")
+async def get_pending_payments(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    student_name: Optional[str] = None,
+    contact_number: Optional[str] = None,
+    branch_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get pending/upcoming installments"""
+    # Get all installment plans
+    plan_query = {"plan_type": PaymentPlanType.INSTALLMENTS.value}
+    
+    if current_user.role != UserRole.ADMIN:
+        # Get enrollments for user's branch
+        enrollments = await db.enrollments.find({"branch_id": current_user.branch_id}, {"_id": 0, "id": 1}).to_list(1000)
+        enrollment_ids = [e["id"] for e in enrollments]
+        plan_query["enrollment_id"] = {"$in": enrollment_ids}
+    elif branch_id:
+        enrollments = await db.enrollments.find({"branch_id": branch_id}, {"_id": 0, "id": 1}).to_list(1000)
+        enrollment_ids = [e["id"] for e in enrollments]
+        plan_query["enrollment_id"] = {"$in": enrollment_ids}
+    
+    plans = await db.payment_plans.find(plan_query, {"_id": 0}).to_list(1000)
+    
+    pending_installments = []
+    today = datetime.now(timezone.utc).date().isoformat()
+    
+    for plan in plans:
+        enrollment = await db.enrollments.find_one({"id": plan.get('enrollment_id')}, {"_id": 0})
+        if not enrollment:
+            continue
+        
+        # Filter by student name
+        if student_name and student_name.lower() not in enrollment.get('student_name', '').lower():
+            continue
+        
+        # Filter by contact
+        if contact_number and contact_number not in enrollment.get('phone', ''):
+            continue
+        
+        # Get installment schedule
+        schedule = await db.installment_schedule.find(
+            {"payment_plan_id": plan['id'], "status": {"$ne": "Paid"}},
+            {"_id": 0}
+        ).to_list(100)
+        
+        for inst in schedule:
+            due_date = inst.get('due_date', '')
+            
+            # Date filters
+            if start_date and due_date < start_date:
+                continue
+            if end_date and due_date > end_date:
+                continue
+            
+            is_overdue = due_date < today
+            
+            pending_installments.append({
+                "enrollment_id": plan['enrollment_id'],
+                "student_name": enrollment.get('student_name', ''),
+                "student_phone": enrollment.get('phone', ''),
+                "student_email": enrollment.get('email', ''),
+                "program_name": enrollment.get('program_name', ''),
+                "installment_number": inst.get('installment_number'),
+                "amount": inst.get('amount'),
+                "due_date": due_date,
+                "is_overdue": is_overdue,
+                "payment_plan_id": plan['id'],
+                "total_installments": plan.get('installments_count', 0),
+                "total_fee": enrollment.get('final_fee', 0)
+            })
+    
+    # Sort by due date
+    pending_installments.sort(key=lambda x: x['due_date'])
+    
+    return pending_installments
+
 # Financial Analytics
 @api_router.get("/analytics/financial/monthly")
 async def get_monthly_financial_analytics(year: int = None, current_user: User = Depends(get_current_user)):
