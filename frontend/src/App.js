@@ -51,6 +51,19 @@ const PrivateRoute = ({ children, adminOnly = false, fdaOnly = false, branchAdmi
   return children;
 };
 
+// Home redirect based on role
+const HomeRedirect = () => {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  
+  // Certificate Manager goes directly to certificates page
+  if (user.role === 'Certificate Manager') {
+    return <Navigate to="/certificates" replace />;
+  }
+  
+  // Everyone else goes to Dashboard
+  return <Layout><Dashboard /></Layout>;
+};
+
 function App() {
   return (
     <BrowserRouter>
