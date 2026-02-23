@@ -154,28 +154,28 @@ const CertificateManagementPage = () => {
     ctx.fillText('CERTIFICATE OF COMPLETION', canvas.width / 2, 280);
     
     // "This is to certify that"
-    ctx.font = '24px Georgia';
+    ctx.font = '24px Georgia, serif';
     ctx.fillStyle = '#333';
     ctx.fillText('This is to certify that', canvas.width / 2, 360);
     
     // Student name
-    ctx.font = 'bold 42px Georgia';
+    ctx.font = 'bold 42px Georgia, serif';
     ctx.fillStyle = '#8B4513';
     ctx.fillText(certData.student_name.toUpperCase(), canvas.width / 2, 430);
     
     // "has successfully completed the professional training program"
-    ctx.font = '22px Georgia';
+    ctx.font = '22px Georgia, serif';
     ctx.fillStyle = '#333';
     ctx.fillText('has successfully completed the professional training program', canvas.width / 2, 490);
     
     // Program name
-    ctx.font = 'bold 28px Georgia';
+    ctx.font = 'bold 28px Georgia, serif';
     ctx.fillStyle = '#1e3a5f';
     const programText = `ETI CERTIFIED – ${certData.program_name.toUpperCase()}`;
     ctx.fillText(programText, canvas.width / 2, 550);
     
     // Duration and mode details
-    ctx.font = '20px Georgia';
+    ctx.font = '20px Georgia, serif';
     ctx.fillStyle = '#333';
     const durationText = `conducted by ETI Educom, ${certData.branch_name}, for a duration of ${certData.program_duration}`;
     ctx.fillText(durationText, canvas.width / 2, 600);
@@ -184,13 +184,13 @@ const CertificateManagementPage = () => {
     ctx.fillText(hoursText, canvas.width / 2, 635);
     
     // Additional text
-    ctx.font = '18px Georgia';
+    ctx.font = '18px Georgia, serif';
     ctx.fillText('During the training, the candidate actively participated in all sessions, demonstrations,', canvas.width / 2, 690);
     ctx.fillText('and practical exercises. Their consistent efforts and enthusiasm throughout the program were commendable.', canvas.width / 2, 720);
     
     // Bottom left - Registration details
     ctx.textAlign = 'left';
-    ctx.font = '16px Arial';
+    ctx.font = '16px Arial, sans-serif';
     ctx.fillStyle = '#555';
     ctx.fillText(`Registration No.: ${certData.registration_number}`, 100, 900);
     ctx.fillText(`Certificate ID: ${certData.certificate_id}`, 100, 930);
