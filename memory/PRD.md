@@ -202,10 +202,8 @@ The user, representing a training institute named "ETI Educom", requested a full
 All high-priority features completed.
 
 ### P1 - Medium Priority
-- [ ] Demo Booking Fields - When lead status changes to "Demo Booked", prompt for demo date, time, trainer
-- [ ] Enhanced Fee Receipt - A4 format with Student/Center copy, logo, address, fee breakdown, T&C
-- [ ] Payment Installment Validation - Prevent sum of installments from exceeding total course fee
 - [ ] International Exams Module - Wire up backend to frontend for exam booking
+- [ ] Student Status Management - Mark students as Dropped/Inactive
 
 ### P2 - Low Priority
 - [ ] WhatsApp Fee Reminders (automated background job)
