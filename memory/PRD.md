@@ -237,11 +237,31 @@ All high-priority features completed.
 ### Branch-Specific
 - GET /api/branch/users - Get users in current user's branch (for task assignment)
 
+### Notifications & Push Subscriptions
+- GET /api/notifications - Get all notifications for current user
+- POST /api/notifications - Send notification (Admin/Branch Admin)
+- PUT /api/notifications/{id}/read - Mark notification as read
+- PUT /api/notifications/mark-all-read - Mark all notifications as read
+- GET /api/notifications/unread-count - Get count of unread notifications
+- GET /api/push-subscriptions/vapid-public-key - Get VAPID public key for browser push
+- POST /api/push-subscriptions - Save browser push subscription
+- DELETE /api/push-subscriptions - Remove push subscription
+
+### Follow-up Reminders
+- GET /api/followups/due-soon - Get follow-ups due within 10 minutes
+- GET /api/followups/overdue - Get overdue follow-ups
+
+### External Lead Capture Webhooks
+- POST /api/webhooks/leads/{webhook_key} - PUBLIC endpoint for lead capture from Google Ads/Meta
+- GET /api/admin/branches/{branch_id}/webhook-info - Get webhook URL and instructions
+- POST /api/admin/branches/{branch_id}/regenerate-webhook-key - Regenerate webhook key
+
 ## Test Credentials
-- Super Admin: admin@eti.com / admin123
-- Branch Admin (test): test_branch_admin_iter4@eti.com / test123
+- Super Admin: admin@etieducom.com / admin@123
+- Branch Admin (test): director@etieducom.com / test123
 
 ## Known Issues/Notes
-- MSG91 WhatsApp integration is FUNCTIONAL but registered number needs to be configured (currently using placeholder "919876543210")
+- MSG91 WhatsApp integration is FUNCTIONAL but registered number needs to be configured
+- VAPID keys for browser push notifications are using test/default values - should be generated for production
 - Reports page enhancement pending
 - Database migrations are manual - if Pydantic models change, existing documents need migration scripts
