@@ -88,6 +88,7 @@ class Branch(BaseModel):
     lead_counter: int = 0      # For custom ID generation
     enrollment_counter: int = 0
     receipt_counter: int = 0
+    webhook_key: Optional[str] = None  # Unique key for external lead capture (Google Ads, Meta)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class BranchCreate(BaseModel):
