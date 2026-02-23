@@ -144,6 +144,8 @@ The user, representing a training institute named "ETI Educom", requested a full
 - [x] New Role: Certificate Manager
   - [x] Added to UserRole enum and admin panel dropdown
   - [x] Certificate Manager can access /certificates page
+  - [x] Certificate Manager redirected to /certificates after login (no Dashboard)
+  - [x] Sidebar shows only "Certificate Requests" and "Ready Certificates" tabs
 - [x] Public Certificate Request Form (/certificate-request)
   - [x] Student enters Enrollment ID to auto-fetch details
   - [x] Form captures: email, phone, program dates, training mode, hours
@@ -159,7 +161,7 @@ The user, representing a training institute named "ETI Educom", requested a full
   - [x] POST /api/certificate-requests/{id}/reject - Reject with reason
   - [x] POST /api/certificate-requests/{id}/download - Download certificate
 - [x] PDF Certificate Generation
-  - [x] Uses user-provided background image
+  - [x] Uses user-provided background image with fallback gradient
   - [x] Generates on frontend using HTML canvas
   - [x] Includes student name, program, duration, dates, training mode
   - [x] Unique QR code for verification
@@ -176,6 +178,23 @@ The user, representing a training institute named "ETI Educom", requested a full
   - [x] 30-minute inactivity timeout
   - [x] Warning toast shown 2 minutes before logout
   - [x] Automatic logout and redirect to login page
+
+### Phase 12: UI/UX Improvements (COMPLETE - December 23, 2025)
+- [x] Enhanced Fee Receipt
+  - [x] A4 format with dual copies (Student Copy / Center Copy)
+  - [x] ETI logo and branch address
+  - [x] Fee breakdown: Total Fee, Amount Paid, Total Paid, Pending Fee
+  - [x] Next Due Date for pending fees
+  - [x] Terms & Conditions section
+  - [x] Authorized Signatory section
+- [x] Payment Installment Validation
+  - [x] Frontend validation prevents amount exceeding remaining fee
+  - [x] Backend validation with descriptive error message
+  - [x] Record Payment dialog shows Total/Paid/Pending amounts
+- [x] Demo Booking Popup
+  - [x] Popup appears when lead status changed to "Demo Booked"
+  - [x] Captures demo date, time, and trainer name
+  - [x] WhatsApp notification sent with demo details
 
 ## Pending/Backlog
 
