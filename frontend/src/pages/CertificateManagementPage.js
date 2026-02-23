@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,9 +17,12 @@ import Layout from '@/components/Layout';
 const CERTIFICATE_BG_URL = 'https://customer-assets.emergentagent.com/job_0a724d63-ec80-4099-a2ee-2dc0b9efd9a6/artifacts/6bzfzkhb_etibackground.png';
 
 const CertificateManagementPage = () => {
+  const [searchParams] = useSearchParams();
+  const initialStatus = searchParams.get('status') || 'all';
+  
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(initialStatus);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [editDialog, setEditDialog] = useState(false);
   const [viewDialog, setViewDialog] = useState(false);
