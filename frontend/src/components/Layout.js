@@ -95,6 +95,7 @@ const Layout = ({ children }) => {
           <span className="text-lg font-semibold text-slate-700 hidden md:block">Branch Management System</span>
         </div>
         <div className="flex items-center gap-4">
+          <NotificationCenter />
           <div className="text-right hidden sm:block">
             <p className="text-sm font-semibold">{user.name}</p>
             <p className="text-xs text-slate-600">{user.email}</p>
