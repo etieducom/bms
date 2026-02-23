@@ -424,6 +424,16 @@ const StudentsPage = () => {
     window.print();
   };
 
+  const handleStatusChange = async (studentId, newStatus) => {
+    try {
+      await studentsAPI.updateStatus(studentId, newStatus);
+      toast.success(`Student status updated to ${newStatus}`);
+      fetchStudents();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update status');
+    }
+  };
+
   const filteredStudents = students.filter(s => {
     // Text search
     const matchesSearch = 
