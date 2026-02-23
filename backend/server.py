@@ -42,6 +42,7 @@ class UserRole(str, Enum):
     BRANCH_ADMIN = "Branch Admin"  # Branch Admin - full access to their branch only
     COUNSELLOR = "Counsellor"
     FRONT_DESK = "Front Desk Executive"
+    CERTIFICATE_MANAGER = "Certificate Manager"  # Manages certificate requests
 
 class LeadStatus(str, Enum):
     NEW = "New"
