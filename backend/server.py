@@ -514,6 +514,33 @@ class PushNotificationCreate(BaseModel):
     message: str
     notification_type: str = "general"
 
+# Browser Push Subscription for Web Push Notifications
+class PushSubscription(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    endpoint: str
+    keys: dict  # Contains p256dh and auth keys
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PushSubscriptionCreate(BaseModel):
+    endpoint: str
+    keys: dict
+
+# Webhook Lead from external sources (Google Ads, Meta)
+class WebhookLeadCreate(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = None
+    source: Optional[str] = None  # e.g., "Google Ads", "Meta", "Facebook"
+    campaign: Optional[str] = None  # Campaign name
+    ad_name: Optional[str] = None  # Ad name
+    form_name: Optional[str] = None  # Form name
+    program_name: Optional[str] = None  # Program interest if captured
+    city: Optional[str] = None
+    state: Optional[str] = None
+    additional_data: Optional[dict] = None  # Any extra fields from the platform
+
 # Enrollment Management
 class EnrollmentStatus(str, Enum):
     ACTIVE = "Active"
