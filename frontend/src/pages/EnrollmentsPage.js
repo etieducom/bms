@@ -1313,7 +1313,20 @@ const EnrollmentsPage = () => {
               <div className="bg-slate-50 p-3 rounded-lg">
                 <p className="text-sm text-slate-600">Student: <span className="font-medium">{selectedEnrollment.student_name}</span></p>
                 <p className="text-sm text-slate-600">Plan Type: <span className="font-medium">{existingPaymentPlan.plan_type}</span></p>
-                <p className="text-sm text-slate-600">Total Amount: <span className="font-bold">₹{existingPaymentPlan.total_amount?.toLocaleString()}</span></p>
+                <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-slate-200">
+                  <div>
+                    <p className="text-xs text-slate-500">Total Fee</p>
+                    <p className="font-bold text-slate-800">₹{(selectedEnrollment.total_fee || existingPaymentPlan.total_amount)?.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Paid</p>
+                    <p className="font-bold text-green-600">₹{(existingPaymentPlan.total_paid || 0)?.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Pending</p>
+                    <p className="font-bold text-amber-600">₹{((selectedEnrollment.total_fee || existingPaymentPlan.total_amount || 0) - (existingPaymentPlan.total_paid || 0))?.toLocaleString()}</p>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1323,8 +1336,12 @@ const EnrollmentsPage = () => {
                     type="number"
                     value={paymentForm.amount}
                     onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                    max={(selectedEnrollment.total_fee || existingPaymentPlan.total_amount || 0) - (existingPaymentPlan.total_paid || 0)}
                     data-testid="payment-amount"
                   />
+                  <p className="text-xs text-slate-500">
+                    Max: ₹{((selectedEnrollment.total_fee || existingPaymentPlan.total_amount || 0) - (existingPaymentPlan.total_paid || 0))?.toLocaleString()}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Payment Mode *</Label>
