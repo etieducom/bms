@@ -2292,6 +2292,17 @@ async def create_payment(payment: PaymentCreate, current_user: User = Depends(ge
             {"$set": {"status": "Paid", "paid_date": payment.payment_date}}
         )
     
+    # Update total_paid and payment_status in enrollment
+    new_total_paid = total_paid + payment.amount
+    new_payment_status = "Paid" if new_total_paid >= final_fee else ("Partial" if new_total_paid > 0 else "Pending")
+    await db.enrollments.update_one(
+        {"id": payment.enrollment_id},
+        {"$set": {
+            "total_paid": new_total_paid,
+            "payment_status": new_payment_status
+        }}
+    )
+    
     # Send WhatsApp notification for payment received
     await send_whatsapp_notification(
         enrollment.get('phone', ''),
