@@ -14,7 +14,9 @@ import { certificateAPI } from '@/api/api';
 import QRCode from 'qrcode';
 import Layout from '@/components/Layout';
 
-const CERTIFICATE_BG_URL = 'https://customer-assets.emergentagent.com/job_0a724d63-ec80-4099-a2ee-2dc0b9efd9a6/artifacts/6bzfzkhb_etibackground.png';
+// Use local assets to avoid CORS issues
+const CERTIFICATE_BG_URL = '/assets/etibackground.png';
+const ETI_LOGO_URL = '/assets/eti-logo.png';
 
 const CertificateManagementPage = () => {
   const [searchParams] = useSearchParams();
