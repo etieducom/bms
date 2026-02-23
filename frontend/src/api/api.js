@@ -50,6 +50,7 @@ export const adminAPI = {
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
   changeUserPassword: (id, data) => api.put(`/admin/users/${id}/password`, data),
   updateUserStatus: (id, data) => api.put(`/admin/users/${id}/status`, data),
+  resetSystem: () => api.post('/admin/reset-system'),
 };
 
 export const leadsAPI = {
