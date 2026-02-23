@@ -2284,13 +2284,56 @@ async def create_payment(payment: PaymentCreate, current_user: User = Depends(ge
     
     # Update installment status if applicable
     if payment.installment_number:
-        await db.installment_schedule.update_one(
+        # Get the installment details
+        installment = await db.installment_schedule.find_one(
             {
                 "payment_plan_id": payment.payment_plan_id,
                 "installment_number": payment.installment_number
             },
-            {"$set": {"status": "Paid", "paid_date": payment.payment_date}}
+            {"_id": 0}
         )
+        
+        if installment:
+            installment_amount = installment.get('amount', 0)
+            
+            # Check if this is a partial payment for this installment
+            if payment.amount < installment_amount:
+                shortfall = installment_amount - payment.amount
+                
+                # Get remaining unpaid installments (after the current one)
+                remaining_installments = await db.installment_schedule.find(
+                    {
+                        "payment_plan_id": payment.payment_plan_id,
+                        "installment_number": {"$gt": payment.installment_number},
+                        "status": {"$ne": "Paid"}
+                    },
+                    {"_id": 0}
+                ).to_list(100)
+                
+                # Distribute shortfall equally among remaining installments
+                if remaining_installments:
+                    shortfall_per_installment = round(shortfall / len(remaining_installments), 2)
+                    
+                    for remaining_inst in remaining_installments:
+                        new_amount = remaining_inst.get('amount', 0) + shortfall_per_installment
+                        await db.installment_schedule.update_one(
+                            {
+                                "payment_plan_id": payment.payment_plan_id,
+                                "installment_number": remaining_inst.get('installment_number')
+                            },
+                            {"$set": {"amount": new_amount}}
+                        )
+                    
+                    logger.info(f"Redistributed shortfall of ₹{shortfall} (₹{shortfall_per_installment} each) to {len(remaining_installments)} remaining installments")
+            
+            # Mark current installment as Paid
+            await db.installment_schedule.update_one(
+                {
+                    "payment_plan_id": payment.payment_plan_id,
+                    "installment_number": payment.installment_number
+                },
+                {"$set": {"status": "Paid", "paid_date": payment.payment_date, "paid_amount": payment.amount}}
+            )
     
     # Update total_paid and payment_status in enrollment
     new_total_paid = total_paid + payment.amount
