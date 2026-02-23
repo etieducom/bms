@@ -1,93 +1,227 @@
 <analysis>**original_problem_statement:**
-The user, representing ETI Educom, requires a comprehensive institute management system. Initial requirements included lead management, multi-role access (Super Admin, Counsellor, FDE), user/branch/program management, enrollments, payments with receipts, expense tracking, and a resource repository.
+The user, ETI Educom, requires an institute management system. Initial features included lead/user/branch management, enrollments, payments, and expenses.
 
-This has since evolved to include:
--   **New Branch Admin Role:** Manages a single branch with specific permissions (e.g., deleting leads/payments/expenses for their branch only).
--   **Advanced Dashboards & Reports:** Role-specific dashboards and branch-filtered reports for Super Admin and Branch Admin.
--   **Configurable WhatsApp (MSG91) Integration:** Super Admin must be able to configure templates, variables, and enable/disable notifications for various events (lead creation, demo booking, enrollment, payment).
--   **Custom ID Generation:** Unique, formatted IDs for Leads, Enrollments, and Receipts based on branch state and city (e.g., ).
--   **Enhanced User Management:** Super Admin can change user passwords, activate/deactivate users, and delete users.
--   **Task Management System:** Branch Admins can assign tasks to users within their branch, and users can update the task status.
--   **International Exams Module:** A separate module for booking international exams, with pricing managed by the Super Admin.
--   **Student Management:** A dedicated page to view all enrolled students, their payment status, and course details. Branch Admins can cancel/drop enrollments.
--   **Push Notifications:** Super Admin to all users, and Branch Admins to their branch staff.
--   **UI/UX:** A corporate-style login page.
+The scope has since expanded significantly to include:
+-   **New Roles:** Branch Admin and the newly requested Certificate Manager.
+-   **Advanced Modules:**
+    -   A complete task management system.
+    -   A quiz-based exam system with public-facing exam links.
+    -   A comprehensive certificate management system with a public request form, admin approval workflow, QR code verification, and PDF generation.
+-   **Configurable Integrations:**
+    -   Advanced, per-event WhatsApp (MSG91) template configuration managed by the Super Admin.
+-   **UI/UX & Document Generation:**
+    -   A corporate-style login page with the company logo.
+    -   A professional, A4-printable fee receipt with dual copies (student/center).
+    -   File uploads (photo, Aadhar card) during student enrollment.
+-   **Workflow Enhancements:**
+    -   A pop-up to capture demo details (date, time, trainer) when a lead's status is changed to Demo Booked.
+    -   Locking leads from being edited after they are Converted and enrolled.
+    -   Branch Admins can mark students as Dropped or Inactive.
+-   **Deployment:** The user requires explicit, step-by-step instructions to deploy the entire application on their own Hostinger VPS.
+-   **Security:** The user has raised concerns about the application's security, specifically regarding persistent login sessions.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack application with a FastAPI backend, React frontend, and MongoDB. The system supports multiple roles (Super Admin, Branch Admin, Counsellor, FDE). Core modules for lead management, enrollment, payments, expenses, and a resource library are functional.
-
-Recent work has added significant backend infrastructure and frontend UI for:
--   A new Branch Admin role with corresponding permissions.
--   Role-specific dashboards and navigation.
--   Enhanced user management in the Admin Panel (status toggle, password change, delete).
--   A new Students page to display enrolled student details.
--   A new Tasks page for task management.
--   A new International Exams module (backend models/endpoints and frontend UI shells).
--   An advanced UI for WhatsApp template configuration in the Admin Panel.
--   A redesigned, simplified corporate login page.
--   Backend logic for custom ID generation, though not fully integrated into all creation flows.
+A full-stack FastAPI/React/MongoDB application. The system supports Super Admin, Branch Admin, Counsellor, and FDE roles. The agent has successfully implemented several key features from the user's recent requests:
+-   **Dashboard & Tasks:** Fixed an issue preventing Branch Admins from seeing users in the task assignment dropdown and corrected the dashboard analytics to properly account for deleted leads.
+-   **WhatsApp Integration:** The backend and frontend have been overhauled to support per-event WhatsApp template configuration (for Enquiry, Demo, Enrollment, Fee Reminder, Birthday).
+-   **Quiz Module:** A complete quiz-based exam module was built, including backend models/APIs, a Super Admin management UI, and a public page for students to take exams.
+-   **Deployment Fixes:** Resolved multiple deployment blockers, including removing hardcoded API keys.
+-   **User-Requested Fixes:** The application title has been changed, the Emergent watermark was removed, the company logo was added, the database was cleared, and a new Super Admin was created.
+-   **Deployment Guidance:** The agent provided extensive, detailed, step-by-step guides for deploying the application on a Hostinger VPS, including debugging multiple environment-specific errors with the user.
 
 **Last working item**:
-- **Last item agent was working:** The agent was responding to the user's request (message #334) to implement three features: a full task management system, a simplified login page, and advanced WhatsApp template settings for the Super Admin. The agent created the , updated the navigation and routing, simplified the  component, and completely replaced the old WhatsApp settings UI in  with a new, advanced configuration interface.
+- **Last item agent was working:** The agent was actively troubleshooting a  versioning error that the user encountered while trying to manually create a Super Admin user on their Hostinger VPS. After providing a fix, the user reported a new issue: auth failed when trying to log in on their deployed instance. The agent was diagnosing this as a frontend environment variable misconfiguration.
 - **Status:** IN PROGRESS
 - **Agent Testing Done:** N
-- **Which testing method agent to use?** both
+- **Which testing method agent to use?** manual testing by curl
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Advanced WhatsApp Settings UI is not connected to the backend (P0)**
-  - **Description:** The new UI in  allows the Super Admin to set template names, namespaces, and body variables. However, the backend  function in  still uses a hardcoded, simpler logic and does not read or utilize these new advanced settings from the  model.
+- **Issue 1: Auth Failed on User's Deployed Instance (P0)**
+  - **Description:** The user cannot log in to their deployed application at  with the correct credentials. This is a critical blocker for the user's deployment efforts. The agent suspected the  in the frontend  file was incorrect, preventing the frontend from communicating with the backend API.
+  - **Attempted fixes:** The agent provided commands to update the  file, rebuild the frontend, and verify the admin user in the database.
   - **Next debug checklist:**
-    - Modify the  function in .
-    - Make it fetch the  for the specific event.
-    - Dynamically construct the MSG91 API payload using the , , , and  from the settings.
-    - Implement a way to substitute variables (e.g., , ) in the  with actual data before sending.
-  - **Why fix this issue and what will be achieved with the fix?** To make the WhatsApp integration fully configurable by the Super Admin as requested.
+    1.  Confirm the user has correctly updated  to .
+    2.  Confirm the user has run yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. in  after updating the  file.
+    3.  Use  on the VPS to test the login endpoint directly to rule out frontend issues: {"detail":"Incorrect email or password"}.
+    4.  Check the browser's developer console (Network tab) on the user's machine for failed API requests when they try to log in.
+    5.  Check Nginx and PM2 logs for any new errors.
+  - **Why fix this issue and what will be achieved with the fix?** This will unblock the user and allow them to finally use the application on their own server.
+  - **Status:** IN PROGRESS
+  - **Is recurring issue?** Y (Part of the larger deployment struggle)
+  - **Should Test frontend/backend/both after fix?** both
+
+- **Issue 2: WhatsApp Messages Not Being Received**
+  - **Description:** The user mentioned, i added namespaces and template names for all but no message received. While the agent refactored the WhatsApp logic, they never performed an end-to-end test to confirm a message is actually sent and received via the MSG91 API after the changes.
+  - **Next debug checklist:**
+    1.  In , add detailed logging to the  function to print the exact payload being sent to MSG91 and the response received.
+    2.  Trigger an event that sends a notification (e.g., create a new lead).
+    3.  Check the backend logs () to see the request and response.
+    4.  Verify the  environment variable is set correctly.
+  - **Why fix this issue and what will be achieved with the fix?** This completes a core feature requested by the user and ensures the integration is functional.
   - **Status:** NOT STARTED
+  - **Is recurring issue?** Y
+  - **Should Test frontend/backend/both after fix?** backend
 
 **In progress Task List**:
-- **Task 1: Complete and Verify Task Management Feature (P0)**
-  - **Where to resume:** The frontend UI () has been created. The backend models and API endpoints () also exist. The next step is to connect the frontend to the backend.
-  - **Actions:**
-    1.  Implement API calls in  to fetch tasks.
-    2.  Build the UI for Branch Admins to create and assign tasks.
-    3.  Build the UI for users to view their assigned tasks and update their status (e.g., Pending, Completed).
-    4.  Thoroughly test the end-to-end flow.
-  - **What will be achieved with this?** A fully functional task management system as requested by the user.
+- **Task 1: Complete User's VPS Deployment (P0)**
+  - **Where to resume:** The user is blocked by the Auth Failed issue. The agent must guide the user to resolve this. After that, final Nginx and SSL configuration may be needed.
+  - **What will be achieved with this?** The user will have a fully functional, self-hosted version of the application.
   - **Status:** IN PROGRESS
-  - **Should Test frontend/backend/both after fix?** both
+  - **Blocked on something:** Blocked on resolving Issue 1: Auth Failed.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-  - **P1: Complete International Exams Module:** The backend and frontend shells exist. Wire them together to allow Admins to create exams/prices and other users to book them.
-  - **P1: Implement Push Notification System:** Create the frontend UI for sending and viewing notifications. The backend models and endpoints are already in place.
-  - **P1: Enforce Payment Constraints:** Add backend validation to ensure the sum of installments for an enrollment does not exceed the total course fee.
-  - **P2: Add Demo Booking Fields:** When a Counsellor changes a lead's status to Demo Booked, the UI should prompt them to enter a demo date, time, and trainer name. These fields need to be saved to the lead document.
-  - **P2: Finish Custom ID Integration:** Ensure the new custom ID format () is correctly generated and saved for all new Leads, Enrollments, and Receipts. The logic exists but needs to be applied consistently across all creation endpoints.
+  - **P0: Implement Certificate Management System:** This is a major new feature request.
+    -   Backend: Create new DB models () and API endpoints for the full lifecycle (create, view, approve, deny).
+    -   Backend: Implement PDF generation using a provided background image, dynamically adding student data and a unique QR code for verification.
+    -   Frontend: Create a public form for students to request certificates using their Enrollment ID.
+    -   Frontend: Create a new page/UI for the Certificate Manager role to manage requests.
+    -   User Role: Add the Certificate Manager role and update the Super Admin panel to assign it.
+    -   Integration: Add a new Certificate Ready event to the WhatsApp notification system.
+  - **P1: Address User's Security Concerns:**
+    -   Based on user's choice, implement either: 1) Auto-logout after 30 mins inactivity, or 2) Logout on browser close (using ).
+  - **P2: Complete Previously Requested Features:**
+    -   **Fee Receipt:** Update the  function to match the user's detailed format (logo, address, student/center copy, fee breakdown, terms).
+    -   **Demo Popup:** Finalize and test the popup on the  that appears when a status is changed to Demo Booked.
+    -   **File Uploads:** Test the student photo and Aadhar card upload functionality during enrollment end-to-end.
+    -   **Student Status:** Ensure Branch Admins can mark students as Dropped or Inactive from the .
 - **Future Tasks:**
-  - **Refactor :** Decompose the monolithic FastAPI application into a structured project with routers, models, and services for better maintainability.
-  - **Global State Management:** Introduce a library like Zustand or Redux Toolkit to manage global state (user role, branch) and reduce prop-drilling.
+  - **Refactor :** Decompose the monolithic FastAPI app into routers/services.
+  - **Refactor :** Split the oversized component into smaller, focused sub-components.
+  - **Global State Management:** Introduce a state management library like Zustand.
 
 **Completed work in this session**
-- **Branch Admin Role & UI:** Implemented frontend UI and backend logic for the Branch Admin role, including role-specific navigation and dashboards.
-- **Payment & Expense Deletion:** Enabled Branch Admins to delete payments and expenses for their branch.
-- **Enhanced User Management:** Added UI and connected backend endpoints for Super Admins to delete users, change passwords, and toggle user active/inactive status in the .
-- **Corporate Login Page:** Redesigned the login page to be a simple, centered dialog.
-- **Student Management Page:** Created the  to list enrolled students and their details.
-- **Advanced WhatsApp Settings UI:** Built a new UI in  for Super Admin to configure WhatsApp templates, variables, and event triggers.
-- **Task Management UI:** Created the initial  component and added it to navigation.
-- **Backend Foundation:** Created models and API endpoints for Tasks, International Exams, and Push Notifications.
+- **Fixed Task Assignment:** Created  endpoint for Branch Admins.
+- **Fixed Dashboard Analytics:** Correctly accounted for deleted leads.
+- **Implemented Per-Event WhatsApp Templates:** Both backend logic and frontend UI were created.
+- **Created Quiz-Based Exams Module:** Full implementation from backend models to a public exam-taking UI.
+- **Locked Converted Leads:** Prevented editing of leads that have been converted and enrolled.
+- **UI/UX Overhaul:**
+  - Updated app title and added company logo to login, header, and receipts.
+  - Removed Emergent watermark.
+  - Designed a new professional fee receipt component (needs format verification).
+- **Database Cleared:** Wiped all data and created a fresh Super Admin user.
+- **Provided Extensive VPS Deployment Support:** Guided the user through installation of all dependencies (Node, Python, Mongo, Nginx, PM2) and debugged numerous errors related to npm <command>
+
+Usage:
+
+npm install        install all the dependencies in your project
+npm install <foo>  add the <foo> dependency to your project
+npm test           run this project's tests
+npm run <foo>      run the script named <foo>
+npm <command> -h   quick help on <command>
+npm -l             display usage info for all commands
+npm help <term>    search for help on <term>
+npm help npm       more involved overview
+
+All commands:
+
+    access, adduser, audit, bugs, cache, ci, completion,
+    config, dedupe, deprecate, diff, dist-tag, docs, doctor,
+    edit, exec, explain, explore, find-dupes, fund, get, help,
+    help-search, hook, init, install, install-ci-test,
+    install-test, link, ll, login, logout, ls, org, outdated,
+    owner, pack, ping, pkg, prefix, profile, prune, publish,
+    query, rebuild, repo, restart, root, run-script, sbom,
+    search, set, shrinkwrap, star, stars, start, stop, team,
+    test, token, uninstall, unpublish, unstar, update, version,
+    view, whoami
+
+Specify configs in the ini-formatted file:
+    /root/.npmrc
+or on the command line via: npm <command> --key=value
+
+More configuration info: npm help config
+Configuration fields: npm help 7 config
+
+npm@10.8.2 /usr/lib/node_modules/npm, 
+Usage:   
+  pip <command> [options]
+
+Commands:
+  install                     Install packages.
+  lock                        Generate a lock file.
+  download                    Download packages.
+  uninstall                   Uninstall packages.
+  freeze                      Output installed packages in requirements format.
+  inspect                     Inspect the python environment.
+  list                        List installed packages.
+  show                        Show information about installed packages.
+  check                       Verify installed packages have compatible 
+dependencies.
+  config                      Manage local and global configuration.
+  search                      Search PyPI for packages.
+  cache                       Inspect and manage pip's wheel cache.
+  index                       Inspect information available from package 
+indexes.
+  wheel                       Build wheels from your requirements.
+  hash                        Compute hashes of package archives.
+  completion                  A helper command used for command completion.
+  debug                       Show information useful for debugging.
+  help                        Show help for commands.
+
+General Options:
+  -h, --help                  Show help.
+  --debug                     Let unhandled exceptions propagate outside the
+                              main subroutine, instead of logging them to
+                              stderr.
+  --isolated                  Run pip in an isolated mode, ignoring
+                              environment variables and user configuration.
+  --require-virtualenv        Allow pip to only run in a virtual environment;
+                              exit with an error otherwise.
+  --python <python>           Run pip with the specified Python interpreter.
+  -v, --verbose               Give more output. Option is additive, and can be
+                              used up to 3 times.
+  -V, --version               Show version and exit.
+  -q, --quiet                 Give less output. Option is additive, and can be
+                              used up to 3 times (corresponding to WARNING,
+                              ERROR, and CRITICAL logging levels).
+  --log <path>                Path to a verbose appending log.
+  --no-input                  Disable prompting for input.
+  --keyring-provider <keyring_provider>
+                              Enable the credential lookup via the keyring
+                              library if user input is allowed. Specify which
+                              mechanism to use [auto, disabled, import,
+                              subprocess]. (default: auto)
+  --proxy <proxy>             Specify a proxy in the form
+                              scheme://[user:passwd@]proxy.server:port.
+  --retries <retries>         Maximum attempts to establish a new HTTP
+                              connection. (default: 5)
+  --timeout <sec>             Set the socket timeout (default 15 seconds).
+  --exists-action <action>    Default action when a path already exists:
+                              (s)witch, (i)gnore, (w)ipe, (b)ackup, (a)bort.
+  --trusted-host <hostname>   Mark this host or host:port pair as trusted,
+                              even though it does not have valid or any HTTPS.
+  --cert <path>               Path to PEM-encoded CA certificate bundle. If
+                              provided, overrides the default. See 'SSL
+                              Certificate Verification' in pip documentation
+                              for more information.
+  --client-cert <path>        Path to SSL client certificate, a single file
+                              containing the private key and the certificate
+                              in PEM format.
+  --cache-dir <dir>           Store the cache data in <dir>.
+  --no-cache-dir              Disable the cache.
+  --disable-pip-version-check
+                              Don't periodically check PyPI to determine
+                              whether a new version of pip is available for
+                              download. Implied with --no-
+                              index.
+  --no-color                  Suppress colored output.
+  --use-feature <feature>     Enable new functionality, that may be backward
+                              incompatible.
+  --use-deprecated <feature>  Enable deprecated functionality, that will be
+                              removed in the future.
+  --resume-retries <resume_retries>
+                              Maximum attempts to resume or restart an
+                              incomplete download. (default: 5) (, ),  configuration, and  versions.
+- **Resolved Dependency Conflict:** Fixed  vs  version issue in .
 
 **Earlier issues found/mentioned but not fixed**
-- The core functionality of the WhatsApp integration remains incomplete. While the UI has been built and rebuilt multiple times, the backend logic to use the advanced template configuration has not been implemented. This is a recurring request from the user that is not yet fully delivered.
-
-**Known issue recurrence from previous fork**
-- **Issue recurrence in previous fork:** .
-- **Recurrence count:** High.
-- **Status:** RESOLVED (historically), but **HIGH RISK**.
-  **Note:** The agent has made extensive changes to , , , and  models, and added several new ones. Any further model changes without a corresponding data migration script are highly likely to cause API failures.
+- The user's report of no message received from the WhatsApp integration was acknowledged but not fully debugged and verified. This is now listed in the All Pending/In progress Issue list.
 
 **Code Architecture**
 
@@ -96,83 +230,93 @@ Recent work has added significant backend infrastructure and frontend UI for:
 - **Frontend:** React, Tailwind CSS, Shadcn/UI, Recharts
 - **Backend:** FastAPI, Pydantic, Motor (async MongoDB driver)
 - **Database:** MongoDB
-- **Architecture:** Single Page Application (React) with a monolithic FastAPI backend API.
+- **Deployment:** Manual deployment on a Linux VPS using Nginx (reverse proxy), PM2 (process manager), and Certbot (SSL).
+- **File Handling:** Using  for file uploads.
 
 **key DB schema**
 - **users:** 
-- **leads:** 
 - **enrollments:** 
-- **branches:** 
-- **whatsapp_settings:** 
-- **tasks:** 
-- **international_exams:** 
-- **exam_bookings:** 
-- **push_notifications:** 
-
-**changes in tech stack**
-- No new technologies, but the  library usage for MSG91 is becoming more complex.
+- **leads:** 
+- **quizzes:** 
+- **quiz_attempts:** 
+- **certificate_requests:** (New) 
 
 **All files of reference**
-- : The most critical file. It contains all backend logic and has grown extremely large and complex.
-- : Heavily modified to include advanced user management and WhatsApp settings.
-- : New file for the task management feature.
-- : New file for viewing enrolled students.
-- : Updated with a new simplified design.
-- : Updated with many new functions for the new features.
-- : Updated with new routes for Tasks, Students, and Exams.
-- : Updated with new navigation links.
+- : All logic resides here. Heavily modified with quiz APIs, file upload endpoint, WhatsApp logic changes, and lead locking logic.
+- :  version was updated to resolve a dependency conflict.
+- : A comprehensive guide created for the user's specific deployment needs.
+- : UI for per-event WhatsApp settings was added.
+- : Modified to handle the demo booking popup and disable editing for converted leads.
+- : New admin page for managing quizzes.
+- : New public page for students to attempt quizzes.
 
 **Areas that need refactoring**:
-- : Urgently needs to be broken down into smaller, manageable modules (e.g., routers, services, models). Its current size makes it extremely difficult and risky to modify.
-- : This component is now over 1000 lines long and handles users, branches, programs, sources, exams, and WhatsApp settings. It should be split into multiple sub-components.
+-  is now even more monolithic and urgently needs to be broken down into routers for auth, leads, quizzes, etc.
+-  continues to grow and should be split into smaller components for each settings section.
 
 **key api endpoints**
-- User Management: , , 
-- Task Management: , , 
-- International Exams: , , 
-- Students/Enrollments: , 
-- Push Notifications: , 
+- **File Upload:** 
+- **Quiz Management:** , 
+- **Public Quiz:** , 
+- **Branch Users:** 
 
 **Critical Info for New Agent**
-- **Prioritize User Requests:** The user provides frequent, detailed feedback and new requirements. The highest priority is to complete the features from the last interaction: Task Management and the Advanced WhatsApp integration.
-- **Fragile Backend:** The  file is a monolith and is very fragile. Be extremely careful when making changes. Adding a single field to a Pydantic model can break the API without a data migration. Test thoroughly after any change.
-- **Incremental Implementation:** Do not attempt to implement all pending features at once. Tackle one task at a time (e.g., 1. Task Management, 2. WhatsApp logic, 3. Exams module), test it, and then move to the next.
+- **Deployment is Priority #1:** The user is actively trying to deploy the app on their Hostinger VPS. They are not a developer and will require clear, simple, command-by-command instructions. The immediate task is to solve the Auth Failed login issue on their server.
+- **New Feature Request is Large:** The Certificate Management System is a significant undertaking. It should be planned carefully before implementation begins, but only after the deployment is successful.
+- **Confirm User Choices:** The user has requested security enhancements. Before implementing, confirm which option they prefer (e.g., auto-logout vs. logout on close).
+- **Verify before Finishing:** The agent has implemented many features (WhatsApp, Demo Popup, Receipts) but has not always performed an end-to-end verification. The next agent must verify these features are fully working as requested. For example, test that a WhatsApp message is actually sent.
 
 **documents and test reports created in this job**
 - 
-- 
+-  (Note: This is from before the quiz module and recent fixes were added)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (Msg #238):** Requested a massive list of features: user password changes (self and admin), user active/inactive status, user deletion, push notifications, task management, installment limits, demo booking fields, and an International Exams module.
-2.  **Agent (Msg #239):** Proposed a phased plan to implement the features.
-3.  **User (Msg #241):** Approved the plan and provided clarification on the exams module.
-4.  **Agent (Msg #242 - #332):** Implemented a large portion of the backend and frontend for the user management and exams module, including a major refactor of . Ran the testing agent.
-5.  **User (Msg #334):** Provided new instructions: implement the task management feature, simplify the login page, and add advanced WhatsApp template settings.
-6.  **Agent (Msg #335):** Confirmed understanding of the new tasks.
-7.  **Agent (Msg #336 - #358):** Implemented the new requests: created , simplified , and completely overhauled the WhatsApp settings UI in . The work is mid-flight and untested.
+- **user**: Provided a detailed request for a Certificate Management system.
+- **user**: Clarified certificate requirements and raised a security concern about persistent logins.
+- **agent**: Explained the security model (JWT) and offered to implement stricter security, asking for the user's preference. Was about to start the Certificate Management system.
+- **user**: Provided deployment error: Unknown command: "error"
+
+To see a list of supported npm commands, run:
+  npm help.
+- **agent**: Provided multiple solutions, including using , fixing , or using yarn install v1.22.22
+[1/4] Resolving packages...
+[2/4] Fetching packages...
+[3/4] Linking dependencies...
+[4/4] Building fresh packages...
+success Saved lockfile.
+Done in 0.04s..
+- **user**: Asked what to do after running yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command..
+- **agent**: Provided the next steps for PM2 and Nginx configuration.
+- **user**: Stated their subdomain and asked how to set it up.
+- **agent**: Provided specific Nginx and SSL instructions for the  subdomain.
+- **user**: Provided PM2 logs showing the backend is in an errored state.
+- **agent**: Asked the user to check logs for the specific error.
+- **user**: Provided error log: .
+- ... This continues through several more debugging messages (, ,  version error, and finally auth failed).
 
 **Project Health Check:**
 - **Broken:**
-    -   The Advanced WhatsApp Settings UI in the frontend is disconnected from the backend  logic.
+    -   The user's VPS deployment is non-functional due to the Auth Failed login issue.
 - **Mocked:**
-    -   The  and  are primarily UI shells; the client-side logic to interact with the backend is not fully implemented.
-    -   The Push Notification feature has backend endpoints but no corresponding UI.
+    -   The new Certificate Management system is just a concept.
+    -   The security enhancements (auto-logout) are not implemented.
 
 **3rd Party Integrations**
-- **MSG91 (WhatsApp API):** Backend integration is IN PROGRESS. The core sending function needs to be updated to support the new advanced template configurations. Auth Key: .
+- **MSG91 (WhatsApp API):** Backend integration exists but needs end-to-end verification. Auth Key: .
 - **Recharts:** Used for dashboard charts.
+- **Dependencies:** , ,  were added to the backend.
 
 **Testing status**
-- **Testing agent used after significant changes:** YES, but several major features have been added since the last test run.
+- **Testing agent used after significant changes:** NO, not since the quiz module and numerous other fixes were implemented. The last test run is outdated.
 - **Troubleshoot agent used after agent stuck in loop:** NO
 - **Test files created:** []
-- **Known regressions:** None, but the latest features are completely untested.
+- **Known regressions:** None confirmed, but many new features and fixes are untested by an agent.
 
 **Credentials to test flow:**
 - **Super Admin:**  / 
-- **Branch Admin / Counsellor / FDE:** Must be created by the Super Admin via the Admin Panel. You will need to create a **Branch Admin** and other roles to test the full application.
 
 **What agent forgot to execute**
-- The agent has not yet connected the new advanced WhatsApp settings UI to the backend sending logic.
-- The constraint to prevent installment payments from exceeding the total course fee has not been implemented.
-- The UI to capture demo booking details (date, time, trainer) has not been added to the lead management flow.</analysis>
+- The agent never performed an end-to-end test of the WhatsApp integration to confirm a message is successfully sent and received after the major refactor. They only checked the API responses and UI.
+- Verification of the Demo Booked popup implementation is incomplete.
+- The professional fee receipt format was implemented but not shown to the user for final verification against their requirements.</analysis>
