@@ -205,63 +205,61 @@ const CertificateManagementPage = () => {
     ctx.moveTo((canvas.width - nameWidth) / 2 - 30, 650);
     ctx.lineTo((canvas.width + nameWidth) / 2 + 30, 650);
     ctx.stroke();
-    ctx.lineTo((canvas.width + nameWidth) / 2 + 20, 510);
-    ctx.stroke();
     
     // "has successfully completed the professional training program"
-    ctx.font = 'italic 28px "Times New Roman", Georgia, serif';
+    ctx.font = 'italic 36px "Times New Roman", Georgia, serif';
     ctx.fillStyle = '#333333';
-    ctx.fillText('has successfully completed the professional training program', canvas.width / 2, 580);
+    ctx.fillText('has successfully completed the professional training program', canvas.width / 2, 730);
     
     // Program Name (bold, blue)
-    ctx.font = 'bold 42px "Times New Roman", Georgia, serif';
+    ctx.font = 'bold 52px "Times New Roman", Georgia, serif';
     ctx.fillStyle = '#1a365d';
     const programText = `ETI CERTIFIED – ${certData.program_name.toUpperCase()}`;
-    ctx.fillText(programText, canvas.width / 2, 660);
+    ctx.fillText(programText, canvas.width / 2, 830);
     
     // Duration details
-    ctx.font = '26px "Times New Roman", Georgia, serif';
+    ctx.font = '32px "Times New Roman", Georgia, serif';
     ctx.fillStyle = '#333333';
     // Extract branch city from branch_name
     const branchCity = certData.branch_name.includes('-') 
       ? certData.branch_name.split('-')[1].trim() 
       : certData.branch_name;
     const durationLine1 = `conducted by ETI Educom, ${branchCity}, Punjab, India, for a duration of ${certData.program_duration}`;
-    ctx.fillText(durationLine1, canvas.width / 2, 730);
+    ctx.fillText(durationLine1, canvas.width / 2, 920);
     
     const hoursText = `(${certData.training_hours || 120} Hours) in ${certData.training_mode} Mode.`;
-    ctx.fillText(hoursText, canvas.width / 2, 770);
+    ctx.fillText(hoursText, canvas.width / 2, 970);
     
     // Participation text
-    ctx.font = 'italic 24px "Times New Roman", Georgia, serif';
+    ctx.font = 'italic 28px "Times New Roman", Georgia, serif';
     ctx.fillStyle = '#444444';
-    ctx.fillText('During the training, the candidate actively participated in all sessions, demonstrations,', canvas.width / 2, 840);
-    ctx.fillText('and practical exercises. Their consistent efforts and enthusiasm throughout the program were commendable.', canvas.width / 2, 875);
+    ctx.fillText('During the training, the candidate actively participated in all sessions, demonstrations,', canvas.width / 2, 1060);
+    ctx.fillText('and practical exercises. Their consistent efforts and enthusiasm throughout the program were commendable.', canvas.width / 2, 1100);
     
     // Award text
-    ctx.fillText('This certificate is awarded in recognition of their dedication, skill development, and successful', canvas.width / 2, 930);
-    ctx.fillText('completion of the program requirements.', canvas.width / 2, 965);
+    ctx.fillText('This certificate is awarded in recognition of their dedication, skill development, and successful', canvas.width / 2, 1170);
+    ctx.fillText('completion of the program requirements.', canvas.width / 2, 1210);
     
     // ========== BOTTOM LEFT - Registration Details ==========
     ctx.textAlign = 'left';
-    ctx.font = 'bold 20px Arial, sans-serif';
+    ctx.font = 'bold 24px Arial, sans-serif';
     ctx.fillStyle = '#1a365d';
-    ctx.fillText(`Registration No.: ${certData.registration_number}`, 120, 1150);
-    ctx.fillText(`Certificate ID: ${certData.certificate_id}`, 120, 1185);
-    ctx.fillText(`Date of Issue: ${certData.issued_date}`, 120, 1220);
+    ctx.fillText(`Registration No.: ${certData.registration_number}`, 150, 1450);
+    ctx.fillText(`Certificate ID: ${certData.certificate_id}`, 150, 1495);
+    ctx.fillText(`Date of Issue: ${certData.issued_date}`, 150, 1540);
     
     // Verification ID with small QR label
-    ctx.font = '18px Arial, sans-serif';
+    ctx.font = '20px Arial, sans-serif';
     ctx.fillStyle = '#666666';
-    ctx.fillText('Verification ID (QR):', 120, 1260);
-    ctx.font = 'bold 18px Arial, sans-serif';
+    ctx.fillText('Verification ID (QR):', 150, 1590);
+    ctx.font = 'bold 20px Arial, sans-serif';
     ctx.fillStyle = '#1a365d';
-    ctx.fillText(certData.verification_id.substring(0, 16), 120, 1290);
+    ctx.fillText(certData.verification_id.substring(0, 16), 150, 1625);
     
     // Small QR code on bottom left
     try {
       const verifyUrl = `${window.location.origin}/verify/${certData.verification_id}`;
-      const smallQrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 100, margin: 1 });
+      const smallQrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 120, margin: 1 });
       
       const smallQrImage = new Image();
       await new Promise((resolve) => {
@@ -271,7 +269,7 @@ const CertificateManagementPage = () => {
       });
       
       if (smallQrImage.complete && smallQrImage.naturalWidth > 0) {
-        ctx.drawImage(smallQrImage, 320, 1230, 80, 80);
+        ctx.drawImage(smallQrImage, 380, 1550, 100, 100);
       }
     } catch (e) {
       console.warn('Small QR failed:', e);
