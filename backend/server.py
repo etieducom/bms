@@ -743,7 +743,7 @@ class MarketingResourceCreate(BaseModel):
 
 class PaymentCreate(BaseModel):
     enrollment_id: str
-    payment_plan_id: str
+    payment_plan_id: Optional[str] = None
     amount: float
     payment_mode: PaymentMode
     payment_date: str
