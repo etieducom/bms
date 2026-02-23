@@ -12,6 +12,120 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Plus, Building, Users, BookOpen, Wallet, Trash2, Link, MessageSquare, Key, UserX, UserCheck, Globe, Webhook, Copy, RefreshCw } from 'lucide-react';
 
+// Webhook Card Component for displaying branch webhook info
+const WebhookCard = ({ branch, onRefresh }) => {
+  const [webhookInfo, setWebhookInfo] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+
+  const fetchWebhookInfo = async () => {
+    setLoading(true);
+    try {
+      const response = await webhookAPI.getBranchWebhookInfo(branch.id);
+      setWebhookInfo(response.data);
+    } catch (error) {
+      toast.error('Failed to fetch webhook info');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const regenerateKey = async () => {
+    if (!window.confirm('Are you sure? This will invalidate the current webhook URL.')) return;
+    
+    setRegenerating(true);
+    try {
+      await webhookAPI.regenerateWebhookKey(branch.id);
+      await fetchWebhookInfo();
+      toast.success('Webhook key regenerated');
+      onRefresh();
+    } catch (error) {
+      toast.error('Failed to regenerate key');
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard`);
+  };
+
+  useEffect(() => {
+    fetchWebhookInfo();
+  }, [branch.id]);
+
+  return (
+    <Card className="border border-slate-200">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-100 rounded-lg">
+              <Webhook className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">{branch.name}</CardTitle>
+              <p className="text-sm text-slate-500">{branch.city}, {branch.state}</p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={regenerateKey}
+            disabled={regenerating}
+          >
+            <RefreshCw className={`w-4 h-4 mr-1 ${regenerating ? 'animate-spin' : ''}`} />
+            Regenerate Key
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {loading ? (
+          <div className="text-center py-4 text-slate-500">Loading...</div>
+        ) : webhookInfo ? (
+          <>
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-500">Webhook URL (for Google Ads / Meta)</Label>
+              <div className="flex items-center gap-2">
+                <Input 
+                  value={webhookInfo.webhook_url} 
+                  readOnly 
+                  className="font-mono text-xs bg-slate-50"
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => copyToClipboard(webhookInfo.webhook_url, 'Webhook URL')}
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="bg-slate-50 rounded-lg p-3 mt-3">
+              <p className="text-xs font-medium text-slate-700 mb-2">Sample Payload (POST JSON)</p>
+              <pre className="text-xs text-slate-600 bg-slate-100 p-2 rounded overflow-x-auto">
+{`{
+  "name": "Lead Name",
+  "phone": "9876543210",
+  "email": "lead@example.com",
+  "source": "Google Ads",
+  "campaign": "Campaign Name",
+  "program_name": "Course Name"
+}`}
+              </pre>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-4 text-slate-500">
+            Failed to load webhook info. Click refresh to retry.
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 const AdminPanel = () => {
   const [branches, setBranches] = useState([]);
   const [programs, setPrograms] = useState([]);
