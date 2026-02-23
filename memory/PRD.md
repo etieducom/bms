@@ -196,6 +196,24 @@ The user, representing a training institute named "ETI Educom", requested a full
   - [x] Captures demo date, time, and trainer name
   - [x] WhatsApp notification sent with demo details
 
+### Phase 13: Lead Workflow & Navigation Improvements (COMPLETE - February 23, 2026)
+- [x] Converted Leads Locking
+  - [x] Converted leads display locked status badge with 🔒 icon
+  - [x] Status dropdown replaced with static badge for converted leads
+  - [x] Edit button disabled for converted leads
+  - [x] Followup button disabled for converted leads
+  - [x] Delete button disabled for converted leads
+  - [x] Tooltip explains "Converted leads are locked" on hover
+- [x] Sidebar Navigation Reordering
+  - [x] Menu order follows user specification for Branch Admin:
+    - Dashboard → Leads → Enrollments → Students → All Payments → Pending Payments
+    - International Exams → Manage Exams → Tasks → Analytics → Reports → Resources
+  - [x] Quiz Exams visible only for Super Admin and FDE roles
+  - [x] Additional items (Pending Follow-ups, Expenses, Deleted Leads) at bottom
+- [x] Ready to Enroll Flow Verified
+  - [x] Converted leads appear in Enrollments page "Ready to Enroll" tab
+  - [x] After enrollment, leads move to "Enrolled" tab
+
 ## Pending/Backlog
 
 ### P0 - High Priority (None currently)
