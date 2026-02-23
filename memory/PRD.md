@@ -298,14 +298,30 @@ The user, representing a training institute named "ETI Educom", requested a full
   - [x] New System tab in Admin Panel with danger zone warning
   - [x] Automated Tasks info display showing scheduled jobs
 
+### Phase 17: Student Management & Exams (COMPLETE - February 23, 2026)
+- [x] Student Status Management
+  - [x] Status dropdown in Students page Actions column
+  - [x] Options: Active, Dropped, Inactive, Completed
+  - [x] Only visible to Admin/Branch Admin roles
+  - [x] Backend endpoint: PUT /api/students/{id}/status
+- [x] International Exams Module Wiring (Verified)
+  - [x] ManageExamsPage.js connected to backend endpoints
+  - [x] Stats cards: Total Bookings, Pending, Confirmed, Completed, Revenue
+  - [x] Booking table with status management
+- [x] Certificate Layout Improvements
+  - [x] Full A4 landscape utilization (3000x2121 canvas)
+  - [x] Geometric triangle background pattern
+  - [x] Better vertical spacing and text sizing
+  - [x] Single QR code in proper position
+
 ## Pending/Backlog
 
 ### P0 - High Priority (None currently)
 All high-priority features completed.
 
 ### P1 - Medium Priority
-- [ ] International Exams Module - Wire up backend to frontend for exam booking
-- [ ] Student Status Management - Mark students as Dropped/Inactive
+- [x] ~~International Exams Module - Wire up backend to frontend for exam booking~~ (DONE)
+- [x] ~~Student Status Management - Mark students as Dropped/Inactive~~ (DONE)
 
 ### P2 - Low Priority
 - [ ] Code Refactoring
