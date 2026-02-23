@@ -278,19 +278,19 @@ const CertificateManagementPage = () => {
     // ========== BOTTOM CENTER - Decorative Element ==========
     // Red crosshair/target symbol
     ctx.strokeStyle = '#cc0000';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     const centerX = canvas.width / 2;
-    const centerY = 1250;
+    const centerY = 1550;
     // Circle
     ctx.beginPath();
-    ctx.arc(centerX, centerY, 25, 0, 2 * Math.PI);
+    ctx.arc(centerX, centerY, 30, 0, 2 * Math.PI);
     ctx.stroke();
     // Cross lines
     ctx.beginPath();
-    ctx.moveTo(centerX - 35, centerY);
-    ctx.lineTo(centerX + 35, centerY);
-    ctx.moveTo(centerX, centerY - 35);
-    ctx.lineTo(centerX, centerY + 35);
+    ctx.moveTo(centerX - 45, centerY);
+    ctx.lineTo(centerX + 45, centerY);
+    ctx.moveTo(centerX, centerY - 45);
+    ctx.lineTo(centerX, centerY + 45);
     ctx.stroke();
     
     // ========== BOTTOM RIGHT - Signature Section ==========
@@ -298,25 +298,25 @@ const CertificateManagementPage = () => {
     
     // Signature line
     ctx.strokeStyle = '#333333';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(canvas.width - 350, 1180);
-    ctx.lineTo(canvas.width - 120, 1180);
+    ctx.moveTo(canvas.width - 450, 1500);
+    ctx.lineTo(canvas.width - 150, 1500);
     ctx.stroke();
     
-    ctx.font = 'bold 22px Arial, sans-serif';
+    ctx.font = 'bold 26px Arial, sans-serif';
     ctx.fillStyle = '#1a365d';
-    ctx.fillText('Authorized Signatory', canvas.width - 120, 1210);
+    ctx.fillText('Authorized Signatory', canvas.width - 150, 1540);
     
-    ctx.font = '20px Arial, sans-serif';
+    ctx.font = '22px Arial, sans-serif';
     ctx.fillStyle = '#333333';
-    ctx.fillText('Academic Head', canvas.width - 120, 1240);
-    ctx.fillText('ETI Educom', canvas.width - 120, 1270);
+    ctx.fillText('Academic Head', canvas.width - 150, 1575);
+    ctx.fillText('ETI Educom', canvas.width - 150, 1610);
     
     // Large QR code on bottom right
     try {
       const verifyUrl = `${window.location.origin}/verify/${certData.verification_id}`;
-      const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 150, margin: 1, color: { dark: '#1a365d' } });
+      const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 180, margin: 1, color: { dark: '#1a365d' } });
       
       const qrImage = new Image();
       await new Promise((resolve) => {
@@ -326,7 +326,7 @@ const CertificateManagementPage = () => {
       });
       
       if (qrImage.complete && qrImage.naturalWidth > 0) {
-        ctx.drawImage(qrImage, canvas.width - 320, 1100, 130, 130);
+        ctx.drawImage(qrImage, canvas.width - 400, 1380, 150, 150);
       }
     } catch (qrError) {
       console.warn('QR code generation failed:', qrError);
@@ -334,9 +334,9 @@ const CertificateManagementPage = () => {
     
     // ========== FOOTER ==========
     ctx.textAlign = 'center';
-    ctx.font = 'italic 18px "Times New Roman", Georgia, serif';
+    ctx.font = 'italic 22px "Times New Roman", Georgia, serif';
     ctx.fillStyle = '#555555';
-    ctx.fillText("Issued in accordance with ETI Educom's documented Quality Management System (QMS) compliant with ISO 9001:2015.", canvas.width / 2, 1380);
+    ctx.fillText("Issued in accordance with ETI Educom's documented Quality Management System (QMS) compliant with ISO 9001:2015.", canvas.width / 2, 1750);
     
     ctx.font = '14px Arial, sans-serif';
     ctx.fillStyle = '#777777';
