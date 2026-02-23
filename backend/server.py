@@ -705,7 +705,7 @@ class Payment(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     enrollment_id: str
-    payment_plan_id: str
+    payment_plan_id: Optional[str] = None
     branch_id: str
     amount: float
     payment_mode: PaymentMode
