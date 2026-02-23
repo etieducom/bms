@@ -88,38 +88,68 @@ const CertificateManagementPage = () => {
       toast.success('Certificate downloaded and WhatsApp notification sent!');
       fetchRequests();
     } catch (error) {
+      console.error('Download error:', error);
       toast.error(error.response?.data?.detail || 'Failed to download certificate');
     }
   };
 
   const generateCertificatePDF = async (certData) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      toast.error('Canvas not available');
+      return;
+    }
     
     const ctx = canvas.getContext('2d');
-    
-    // Load background image
-    const bgImage = new Image();
-    bgImage.crossOrigin = 'anonymous';
-    
-    await new Promise((resolve, reject) => {
-      bgImage.onload = resolve;
-      bgImage.onerror = reject;
-      bgImage.src = CERTIFICATE_BG_URL;
-    });
     
     // Set canvas size to match A4 landscape (approximately)
     canvas.width = 1754;
     canvas.height = 1240;
     
-    // Draw background
-    ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+    // Try to load background image, use fallback if fails
+    try {
+      const bgImage = new Image();
+      bgImage.crossOrigin = 'anonymous';
+      
+      await new Promise((resolve, reject) => {
+        bgImage.onload = resolve;
+        bgImage.onerror = () => {
+          console.warn('Background image failed to load, using gradient');
+          resolve(); // Continue without background
+        };
+        bgImage.src = CERTIFICATE_BG_URL;
+      });
+      
+      if (bgImage.complete && bgImage.naturalWidth > 0) {
+        ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+      } else {
+        // Fallback gradient background
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        gradient.addColorStop(0, '#f8f9fa');
+        gradient.addColorStop(1, '#e9ecef');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Add decorative border
+        ctx.strokeStyle = '#1e3a5f';
+        ctx.lineWidth = 10;
+        ctx.strokeRect(30, 30, canvas.width - 60, canvas.height - 60);
+      }
+    } catch (err) {
+      console.warn('Background image error:', err);
+      // Use fallback gradient
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, '#f8f9fa');
+      gradient.addColorStop(1, '#e9ecef');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     
     // Set text styles
     ctx.textAlign = 'center';
     
     // Title - "CERTIFICATE OF COMPLETION"
-    ctx.font = 'bold 48px Georgia';
+    ctx.font = 'bold 48px Georgia, serif';
     ctx.fillStyle = '#1e3a5f';
     ctx.fillText('CERTIFICATE OF COMPLETION', canvas.width / 2, 280);
     
