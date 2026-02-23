@@ -12,172 +12,166 @@ The user, ETI Educom, requires a comprehensive institute management system. The 
     -   A complete task management module.
     -   In-app and browser push notifications for task assignments.
     -   Alarm notifications for counsellors 10 minutes prior to a lead follow-up time.
--   **Exam Module:** A quiz-based exam system with a public-facing page for students.
+-   **Automation:**
+    -   Automated WhatsApp fee reminders.
+    -   Automated birthday wishes via WhatsApp.
+-   **Exam Module:** A quiz-based exam system and wiring for an International Exams module.
 -   **Certificate Management System:**
     -   A public form for students to request certificates using their Enrollment ID.
     -   A Certificate Manager role with a dedicated dashboard to approve/deny requests.
-    -   Automated PDF certificate generation using a specific background image and layout.
-    -   A unique QR code on each certificate for public verification.
+    -   Automated PDF certificate generation in A4 landscape format with a specific background, company logo, and a unique QR code for public verification.
     -   WhatsApp notification to the student when their certificate is ready.
 -   **Financials:**
-    -   Generation of a professional, A4-printable fee receipt with dual Student Copy and Center Copy sections.
-    -   Validation to prevent payment installments from exceeding the total course fee.
--   **Integrations:** Configurable, per-event WhatsApp (MSG91) template management.
--   **Security:** Auto-logout after 30 minutes of inactivity.
--   **UI/UX:**
+    -   Generation of a professional, A4-printable fee receipt (Student Copy only) with terms and conditions.
+    -   A dedicated Pay Fee workflow accessible from the Students list.
+    -   A unified Pending Payments view showing all due payments (one-time and installments).
+-   **UI/UX & Filters:**
     -   A corporate-style login page with a company logo.
     -   A specific, user-defined order for the sidebar navigation menu.
+    -   Date-range filters on the Leads and Students pages.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack FastAPI/React/MongoDB application with a multi-role user system. Most of the user's core feature requests have been implemented, including a comprehensive certificate generation pipeline, a full notification and alarm system (in-app and browser push), lead-capture webhooks for external platforms, and security enhancements like auto-logout. The frontend UI has been significantly updated with new pages, components, and role-specific layouts.
+A full-stack FastAPI/React/MongoDB application. Most core features are implemented, including a multi-role user system, lead/enrollment management, notifications, and webhooks. In the last session, the payment system was significantly overhauled with a new workflow on the Students page, an improved Pending Payments view, and a redesigned A4 fee receipt. Date filters were added to the Leads and Students pages. The WhatsApp integration API call was successfully tested. The lead workflow for Converted leads was fixed, and the sidebar navigation was reordered as per the user's request.
 
 **Last working item**:
--   **Last item agent was working:** The agent was addressing the user's most recent request to fix the lead management workflow. This involves three parts:
-    1.  Locking leads with a Converted status to prevent further changes.
-    2.  Creating a Ready to Enroll view/section to display these converted leads.
-    3.  Reordering the main sidebar navigation menu to the user's specification.
-    The agent had begun by inspecting .
+-   **Last item agent was working:** The user provided a final list of pre-go-live tasks. The agent started working on the highest priority item: fixing the certificate generation. The user reported that the certificate is still missing the ETI Educom logo, contains two QR codes instead of one, and has excessive empty space at the bottom. The agent began a complete rewrite of the  function in  to address these issues.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** frontend testing agent
+-   **Which testing method agent to use?** screenshot tool
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Lead Workflow and UI Fixes (P0)**
-    -   **Description:** The user has reported that Converted leads are not being locked, are not appearing in a Ready to Enroll section, and the sidebar menu is in the wrong order. This is a critical workflow and usability issue.
-    -   **Attempted fixes:** The agent started exploring .
+-   **Issue 1: Certificate Generation Formatting (P0)**
+    -   **Description:** The generated certificate is visually incorrect. It is missing the company logo, displays a duplicate QR code, and has poor vertical spacing, leaving a large gap at the bottom.
+    -   **Attempted fixes:** The agent started a complete rewrite of the  function in  to properly load assets and control the layout.
     -   **Next debug checklist:**
-        1.  Open . In the status update logic (likely within a dropdown or modal), add a condition to disable the control if the lead's current status is Converted.
-        2.  In the same file, modify the filtering logic. Create a new tab or filtered view named Ready to Enroll that exclusively displays leads where .
-        3.  Open . Locate the  array or equivalent structure.
-        4.  Reorder the items in that array to match the sequence specified by the user: .
-    -   **Why fix this issue and what will be achieved with the fix?** This will align the application's lead management process and navigation with the user's explicit operational requirements.
+        1.  Finalize the rewrite of  in .
+        2.  Ensure the logo image at  is correctly loaded onto the canvas, setting  to prevent CORS issues.
+        3.  Remove the logic that generates the second, redundant QR code.
+        4.  Adjust the y-coordinates of all drawn elements (text, QR code, signatures) to create a balanced A4 landscape layout and eliminate the large bottom margin.
+        5.  Generate a test certificate and verify the visual output via a screenshot.
+    -   **Why fix this issue and what will be achieved with the fix?** This will deliver a professional, correctly branded certificate, which is a critical requirement for the user before the application goes live.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
+    -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** frontend
+    -   **Blocked on other issue:** None
 
 **In progress Task List**:
--   **Task 1: Complete Lead Workflow and Sidebar Reordering (P0)**
-    -   **Where to resume:** Continue editing  and  as outlined in the issue checklist above.
-    -   **What will be achieved with this?** The user's latest and most urgent requests will be fulfilled, fixing a key workflow.
+-   **Task 1: Complete Certificate Fixes (P0)**
+    -   **Where to resume:** Continue editing . The agent has pasted the new  function but needs to remove the remaining old, duplicated code block that follows it.
+    -   **What will be achieved with this?** A correctly formatted certificate with the company logo, a single QR code, and a proper A4 landscape layout.
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** frontend
     -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   **P1: End-to-End Verification of Untested Features:**
-        -   **WhatsApp Integration:** Trigger an event (like new enrollment) and confirm a message is physically received on a test device via the MSG91 API.
-        -   **Demo Booking Popup:** On the , change a lead's status to Demo Booked and verify that the popup for capturing demo details appears and functions correctly.
+    -   **P1: WhatsApp Fee Reminders Automation:** Implement a daily scheduled task in  (e.g., using ) to query for pending payments and send WhatsApp reminders to students.
+    -   **P1: Birthday Wishes Automation:** Implement a second daily scheduled task to find students with birthdays on the current date and send a celebratory WhatsApp message. This will require adding a  field to the student model and enrollment UI.
+    -   **P2: International Exams Module Wiring:** Define backend models and API endpoints in  for managing international exams. Connect the existing frontend page to these new endpoints to make the module functional.
+    -   **P2: Code Refactoring ():** As requested by the user, decompose the monolithic  into a scalable structure using FastAPI's API Routers (e.g., creating , , etc.).
 -   **Future Tasks:**
-    -   **Refactor :** Decompose the monolithic FastAPI application into a more scalable structure using API routers (e.g., , ).
-    -   **Refactor :** Break down the large  component into smaller, more manageable sub-components for each settings section (Users, Branches, WhatsApp, Webhooks).
-    -   **State Management:** Introduce a global state management library like Zustand or Redux Toolkit to simplify state sharing between components.
+    -   **Refactor :** Break down the large component into smaller sub-components for better maintainability.
+    -   **End-to-End Verification:** Manually test the Demo Booked popup workflow to ensure it appears and functions correctly.
 
 **Completed work in this session**
--   **Notification & Alarm System:** Implemented a full notification suite including in-app alerts (bell icon), browser push notifications (via Service Worker), and timed alarms for lead follow-ups.
--   **Lead Capture Webhooks:** Created secure, branch-specific webhook endpoints for ingesting leads from external marketing platforms. Added a UI in the Admin Panel for managing webhook keys.
--   **Certificate Management System (Full Implementation & Fixes):**
-    -   Built the entire workflow: public request form, Certificate Manager role, approval dashboard, and public QR code verification page.
-    -   **Fixed Certificate Download:** Resolved a critical cross-origin bug that prevented the certificate image from loading into the canvas for PDF generation.
-    -   **Custom PDF Styling:** Rewrote the PDF generation logic to precisely match the user's sample image, using a custom background and specific text placements.
--   **Security & UI Enhancements:**
-    -   Implemented an auto-logout feature after 30 minutes of inactivity.
-    -   Refined the Certificate Manager's UI to be more focused, removing the main dashboard and providing direct navigation to relevant tasks.
--   **Payment & Receipt Logic:**
-    -   Added frontend validation to prevent recording payments that exceed the total course fee.
-    -   Enhanced the printable fee receipt component for better formatting.
--   **Testing:** Utilized the testing subagent to validate the notification system and the certificate management system after implementation and major bug fixes.
+-   **Payment System Overhaul:**
+    -   A Pay Fee button was added to the  page, creating a new primary workflow for fee collection ().
+    -   The  view was enhanced to show both one-time and installment pending payments from a unified backend endpoint (, ).
+    -   A Print Receipt option was added to the  page ().
+-   **Fee Receipt Redesign:** The receipt was updated to generate a single Student Copy formatted for A4 printing with Terms & Conditions.
+-   **Lead Workflow and UI Fixes:**
+    -   Fixed the Ready to Enroll view by resolving a backend crash caused by bad data ().
+    -   Converted leads are now correctly locked from further edits ().
+    -   The sidebar navigation menu order was corrected for all user roles ().
+    -   Date range filters were added to the  and  pages.
+-   **WhatsApp Integration Test:** The agent successfully executed an API call to the MSG91 service using the user's provided phone number, confirming the backend integration is functioning.
 
 **Earlier issues found/mentioned but not fixed**
--   **WhatsApp Message Reception:** The original handoff noted that the MSG91 integration was never confirmed end-to-end. While the logic was built, no test was run to verify a message is actually delivered to a phone. This remains an unverified item.
+-   **Demo Booking Popup Verification:** The functionality was implemented in a previous session but has not been explicitly tested from a user's perspective.
 
 **Known issue recurrence from previous fork**
--   None in this session.
+-   **Certificate Generation:** The formatting issues (missing logo, incorrect layout) are a recurring problem. The agent's previous fix was insufficient, leading to the current complete rewrite of the function.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frontend:** React, Tailwind CSS, Shadcn/UI, ,  API for dynamic image/PDF generation.
--   **Backend:** FastAPI, Pydantic, Motor (async MongoDB),  for push notifications.
+-   **Frontend:** React, Tailwind CSS, Shadcn/UI, ,  API for dynamic PDF/image generation.
+-   **Backend:** FastAPI, Pydantic, Motor (async MongoDB), .  will likely be needed for automation tasks.
 -   **Database:** MongoDB.
--   **Notifications:** A hybrid system using Web Push Protocol (via Service Workers) for real-time browser notifications and API polling for in-app updates.
 
 **key DB schema**
--   **branches:** Added .
--   **notifications:** New collection .
--   **browser_push_subscriptions:** New collection to store user subscription data for push notifications.
--   **certificate_requests:** New collection for the certificate lifecycle .
+-   **enrollments:** No schema changes, but a record with missing required fields (, , etc.) was manually repaired in the database to fix an API crash.
 
 **changes in tech stack**
--   **Backend:** Added  for implementing the Web Push Protocol.
--   **Frontend:** Added  for generating QR codes on the certificate.
+-   None.
 
 **All files of reference**
--   **New Critical Files:**
-    -   : Core of the notification system.
-    -   : Handles certificate approval and PDF generation.
-    -   : Enables background push notifications.
-    -   : Asset for certificate styling.
--   **Heavily Modified Files:**
-    -   : Grew significantly with all new backend logic.
-    -   : Modified for the notification bell, new sidebar links, and role-based visibility.
-    -   : Updated with new pages and the global activity tracker.
+-   : Contains the certificate generation logic currently being fixed.
+-   : Contains the new primary payment workflow.
+-   : Displays the unified list of pending payments.
+-   : Contains the list of all payments with the print receipt option.
+-   : Contains the new date filter.
+-   : Contains the reordered navigation menu.
+-   : Contains all backend logic, including the updated pending payments endpoint and receipt data endpoint. Target for refactoring and new automation tasks.
 
 **Areas that need refactoring**:
--   : This file is critically monolithic and difficult to maintain. It should be broken down into separate router files for each domain (auth, leads, certificates, etc.).
--   : The  function has hardcoded coordinates and font sizes for placing text on the certificate. This is brittle and should be refactored to be more declarative or configuration-driven.
+-   : Critically monolithic. The user has explicitly requested this be broken down into separate router files.
+-   : This large component should be broken into smaller sub-components for each settings section.
 
 **key api endpoints**
--   **Webhooks:** 
--   **Notifications:** , 
--   **Certificates:** , , 
+-   : Modified to return both one-time and installment pending payments.
+-   : Modified to include  in the response.
+-   : Investigated and verified.
+-   : Used by the new payment workflow on the Students page.
 
 **Critical Info for New Agent**
--   The user's top priority is the list of fixes from their last message: locking converted leads, creating the Ready to Enroll view, and reordering the sidebar. Address these first.
--   The certificate generation code in  is very specific and fragile. Be cautious if any changes are requested for the certificate's appearance, as it will require manually adjusting pixel coordinates in the code.
--   After completing the current tasks, prioritize verifying the end-to-end functionality of the WhatsApp and Demo Booking features, as they have been implemented but not fully tested from a user's perspective.
+-   The user wants to go live, so the current list of tasks (certificate fix, automations, refactoring) is the final push.
+-   The highest priority is fixing the certificate generation. It's a recurring issue, so the current rewrite must be thorough and final.
+-   The user has explicitly requested the  refactor as a task, elevating it from technical debt to a feature requirement.
+-   The new automation features will require adding a task scheduler like  to the backend.
 
 **documents and test reports created in this job**
 -   
 -   
--   
--   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **user**: Requested a comprehensive Certificate Management system and a new Fee Receipt format.
-2.  **agent**: Summarized the plan and began implementation.
-3.  **user**: Reported that the certificate download was failing and requested UI changes for the Certificate Manager dashboard.
-4.  **agent**: Acknowledged, debugged the download issue, and implemented the UI changes.
-5.  **user**: Provided specific images for the certificate background and layout, demanding an exact match.
-6.  **agent**: Acknowledged and rewrote the PDF generation code to meet the new styling requirements.
-7.  **user**: **[LATEST PENDING]** Reported three new issues: Converted leads are not locked, they don't appear in a Ready to Enroll section, and the sidebar menu order is incorrect.
-8.  **agent**: Acknowledged the new request and began investigation.
-9.  **user**: please continue
-10. **agent**: Continued investigation into the lead management page.
+1.  **User:** Provided their correct phone numbers for WhatsApp testing, asked for advice on the payment workflow, and confirmed overdue installments should be visible.
+2.  **Agent:** Tested WhatsApp successfully with the new number and recommended moving the primary payment workflow to the Students page.
+3.  **User:** please continue and complete this now (while agent was implementing the payment system).
+4.  **Agent:** Fixed a bug in the receipt data, completed the payment system implementation, and showed the successful result.
+5.  **Agent:** Marked the task as finished.
+6.  **User:** Requested further improvements: A4 receipt with T&Cs, a Print Receipt option on the All Payments page, and a unified view of all pending payments (one-time & installments).
+7.  **Agent:** Implemented all requested payment and receipt improvements and showed the results.
+8.  **Agent:** Marked the task as finished.
+9.  **User:** Requested final pre-go-live changes: a single-copy receipt, date filters on Leads/Students pages, and fixes for the A4 landscape certificate format and missing logo.
+10. **Agent:** Implemented the receipt and filter changes, attempted the certificate fix, and marked the task as finished.
+11. **User (LATEST PENDING):** Reported that the certificate is still broken (no logo, two QR codes, bad spacing). Also requested several new major features: WhatsApp fee/birthday automation, wiring up the International Exams module, and refactoring .
 
 **Project Health Check:**
 -   **Broken:**
-    -   The lead workflow for Converted leads is not functioning as the user requires.
-    -   The main application navigation (sidebar) is not in the user's desired order.
+    -   Certificate generation produces a visually incorrect document (missing logo, extra QR code, poor layout).
+-   **Mocked:**
+    -   The International Exams module UI exists but is not connected to any backend logic.
 
 **3rd Party Integrations**
--   **MSG91 (WhatsApp API):** Backend integration exists. End-to-end delivery verification is pending.
+-   **MSG91 (WhatsApp API):** Backend integration is confirmed to be working at the API call level. Templates and end-to-end delivery confirmation are managed on the MSG91 platform.
 -   **Web Push Protocol:** Implemented via  for browser push notifications.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES, for the notification and certificate features.
+-   **Testing agent used after significant changes:** YES, for the lead locking and sidebar changes.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** []
--   **Known regressions:** The handling of Converted leads is considered a bug/regression from the user's perspective.
+-   **Known regressions:** The certificate generation formatting has regressed or was never fully fixed, despite previous attempts.
 
 **Credentials to test flow:**
 -   **Super Admin:**  / 
 -   **Certificate Manager:**  / 
+-   **Branch Admin:**  / 
 
 **What agent forgot to execute**
--   The agent has consistently deferred the end-to-end verification of the MSG91 WhatsApp integration, which was noted as a pending item from the previous fork. A message has not been confirmed as received.
--   The Demo Booked popup feature was implemented but never fully verified through a user-like interaction.</analysis>
+-   The  popup workflow, implemented in a much earlier session, has still not been explicitly tested or verified.
+-   While the WhatsApp API call is confirmed working, a full end-to-end test for a specific business event (like a new enrollment generating a welcome message) has not been confirmed by the user.</analysis>
