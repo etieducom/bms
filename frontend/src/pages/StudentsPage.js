@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { studentsAPI } from '@/api/api';
+import { studentsAPI, paymentAPI, enrollmentAPI } from '@/api/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Search, GraduationCap, User, Phone, Mail, CreditCard, Printer, XCircle, Eye } from 'lucide-react';
+import { Search, GraduationCap, User, Phone, Mail, CreditCard, Printer, XCircle, Eye, Wallet } from 'lucide-react';
 import { format } from 'date-fns';
+
+const PAYMENT_MODES = ['Cash', 'Card', 'UPI', 'Net Banking', 'Cheque'];
 
 const StudentsPage = () => {
   const [students, setStudents] = useState([]);
@@ -18,10 +22,29 @@ const StudentsPage = () => {
   const [studentDetails, setStudentDetails] = useState(null);
   const [cancelDialog, setCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  
+  // Payment dialog state
+  const [paymentDialog, setPaymentDialog] = useState(false);
+  const [paymentPlan, setPaymentPlan] = useState(null);
+  const [installments, setInstallments] = useState([]);
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    payment_mode: 'Cash',
+    payment_date: new Date().toISOString().split('T')[0],
+    installment_number: '',
+    remarks: ''
+  });
+  const [savingPayment, setSavingPayment] = useState(false);
+  
+  // Receipt dialog
+  const [receiptDialog, setReceiptDialog] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isBranchAdmin = user.role === 'Branch Admin';
+  const isFDE = user.role === 'Front Desk Executive';
   const canCancel = isBranchAdmin;
+  const canPay = isBranchAdmin || isFDE || user.role === 'Admin';
 
   useEffect(() => {
     fetchStudents();
@@ -47,6 +70,216 @@ const StudentsPage = () => {
     } catch (error) {
       toast.error('Failed to fetch student details');
     }
+  };
+
+  const openPaymentDialog = async (student) => {
+    setSelectedStudent(student);
+    try {
+      // Fetch payment plan and installments
+      const planRes = await enrollmentAPI.getPaymentPlan(student.id);
+      setPaymentPlan(planRes.data);
+      
+      if (planRes.data?.installments) {
+        // Get paid installments
+        const paymentsRes = await enrollmentAPI.getEnrollmentPayments(student.id);
+        const paidInstallments = paymentsRes.data
+          .filter(p => p.installment_number)
+          .map(p => p.installment_number);
+        
+        // Mark which installments are paid
+        const installmentsWithStatus = planRes.data.installments.map(inst => ({
+          ...inst,
+          is_paid: paidInstallments.includes(inst.installment_number)
+        }));
+        setInstallments(installmentsWithStatus);
+        
+        // Auto-select first unpaid installment
+        const firstUnpaid = installmentsWithStatus.find(i => !i.is_paid);
+        if (firstUnpaid) {
+          setPaymentForm(prev => ({
+            ...prev,
+            installment_number: firstUnpaid.installment_number.toString(),
+            amount: firstUnpaid.amount.toString()
+          }));
+        }
+      } else {
+        setInstallments([]);
+        // For one-time payment, set remaining amount
+        const remaining = (student.final_fee || 0) - (student.total_paid || 0);
+        setPaymentForm(prev => ({
+          ...prev,
+          amount: remaining > 0 ? remaining.toString() : '',
+          installment_number: ''
+        }));
+      }
+      
+      setPaymentForm(prev => ({
+        ...prev,
+        payment_mode: 'Cash',
+        payment_date: new Date().toISOString().split('T')[0],
+        remarks: ''
+      }));
+      
+      setPaymentDialog(true);
+    } catch (error) {
+      // No payment plan exists - need to create one first
+      toast.error('Please create a payment plan first from Enrollments page');
+    }
+  };
+
+  const handleInstallmentSelect = (installmentNum) => {
+    const inst = installments.find(i => i.installment_number === parseInt(installmentNum));
+    if (inst) {
+      setPaymentForm(prev => ({
+        ...prev,
+        installment_number: installmentNum,
+        amount: inst.amount.toString()
+      }));
+    }
+  };
+
+  const handleRecordPayment = async () => {
+    if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    
+    const totalFee = selectedStudent?.final_fee || 0;
+    const totalPaid = selectedStudent?.total_paid || 0;
+    const remainingAmount = totalFee - totalPaid;
+    const paymentAmount = parseFloat(paymentForm.amount);
+    
+    if (paymentAmount > remainingAmount) {
+      toast.error(`Payment amount (₹${paymentAmount.toLocaleString()}) cannot exceed pending fee (₹${remainingAmount.toLocaleString()})`);
+      return;
+    }
+    
+    setSavingPayment(true);
+    try {
+      const paymentRes = await paymentAPI.createPayment({
+        enrollment_id: selectedStudent.id,
+        payment_plan_id: paymentPlan?.id,
+        amount: paymentAmount,
+        payment_mode: paymentForm.payment_mode,
+        payment_date: paymentForm.payment_date,
+        installment_number: paymentForm.installment_number ? parseInt(paymentForm.installment_number) : null,
+        remarks: paymentForm.remarks
+      });
+      
+      toast.success('Payment recorded successfully!');
+      setPaymentDialog(false);
+      
+      // Show receipt
+      try {
+        const receiptRes = await paymentAPI.generateReceipt(paymentRes.data.id);
+        setReceiptData(receiptRes.data);
+        setReceiptDialog(true);
+      } catch {
+        // Receipt generation failed, but payment was successful
+      }
+      
+      fetchStudents();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to record payment');
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
+  const handlePrintReceipt = () => {
+    const printWindow = window.open('', '', 'height=900,width=800');
+    const logoUrl = 'https://etieducom.com/wp-content/uploads/2024/03/eti-educom-logo.png';
+    
+    const nextDueDate = new Date();
+    nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+    nextDueDate.setDate(10);
+    const dueDateStr = nextDueDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    
+    const pendingAmount = (receiptData?.total_fee || 0) - (receiptData?.total_paid || 0);
+    
+    const receiptHTML = `
+      <div class="receipt-copy">
+        <div class="copy-label">COPY_TYPE</div>
+        <div class="header">
+          <img src="${logoUrl}" alt="ETI Educom" class="logo" onerror="this.style.display='none'"/>
+          <h1>ETI EDUCOM</h1>
+          <p class="tagline">Professional Training & Skill Development</p>
+          <p class="address">${receiptData?.branch_name || ''}</p>
+        </div>
+        <div class="receipt-title">
+          <h2>FEE RECEIPT</h2>
+          <div class="receipt-meta">
+            <span>Receipt No: <strong>${receiptData?.receipt_number || 'N/A'}</strong></span>
+            <span>Date: ${receiptData?.payment_date ? new Date(receiptData.payment_date).toLocaleDateString('en-IN') : ''}</span>
+          </div>
+        </div>
+        <div class="student-details">
+          <table>
+            <tr><td class="label">Student Name</td><td class="value" colspan="3">${receiptData?.student_name || ''}</td></tr>
+            <tr><td class="label">Enrollment No</td><td class="value">${receiptData?.enrollment_id || ''}</td><td class="label">Phone</td><td class="value">${receiptData?.phone || ''}</td></tr>
+            <tr><td class="label">Course Name</td><td class="value" colspan="3">${receiptData?.program_name || ''}</td></tr>
+          </table>
+        </div>
+        <div class="fee-breakdown">
+          <h3>Fee Details</h3>
+          <table>
+            <tr><td class="label">Total Course Fee</td><td class="value amount-cell">₹${receiptData?.total_fee?.toLocaleString('en-IN') || '0'}/-</td></tr>
+            <tr><td class="label">Amount Paid (This Receipt)</td><td class="value amount-cell highlight">₹${receiptData?.amount?.toLocaleString('en-IN') || '0'}/-</td></tr>
+            <tr><td class="label">Total Paid (Till Date)</td><td class="value amount-cell">₹${receiptData?.total_paid?.toLocaleString('en-IN') || '0'}/-</td></tr>
+            <tr class="${pendingAmount > 0 ? 'pending-row' : 'paid-row'}"><td class="label">Pending Fee</td><td class="value amount-cell">₹${pendingAmount.toLocaleString('en-IN')}/-</td></tr>
+            ${pendingAmount > 0 ? `<tr><td class="label">Next Due Date</td><td class="value">${dueDateStr}</td></tr>` : ''}
+          </table>
+        </div>
+        <div class="payment-info"><table><tr><td class="label">Payment Mode</td><td class="value">${receiptData?.payment_mode || ''}</td></tr></table></div>
+        <div class="signatures"><div class="signature"><p>Student Signature</p></div><div class="signature authorized"><p>Authorized Signatory</p><small>ETI Educom</small></div></div>
+      </div>
+    `;
+    
+    const cssStyles = `
+      @page { size: A4; margin: 8mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; line-height: 1.4; }
+      .receipt-copy { border: 2px solid #1a365d; padding: 15px; margin-bottom: 8px; position: relative; background: white; }
+      .copy-label { position: absolute; top: -1px; right: 15px; background: #1a365d; color: white; padding: 4px 15px; font-size: 10px; font-weight: bold; border-radius: 0 0 5px 5px; }
+      .header { text-align: center; border-bottom: 2px solid #1a365d; padding-bottom: 10px; margin-bottom: 10px; }
+      .header .logo { height: 45px; margin-bottom: 5px; }
+      .header h1 { font-size: 22px; color: #1a365d; letter-spacing: 3px; margin: 5px 0; }
+      .header .tagline { font-size: 10px; color: #4a5568; font-style: italic; }
+      .header .address { font-size: 9px; color: #718096; margin-top: 3px; }
+      .receipt-title { text-align: center; background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%); color: white; padding: 10px; margin-bottom: 12px; border-radius: 5px; }
+      .receipt-title h2 { font-size: 16px; letter-spacing: 2px; margin-bottom: 5px; }
+      .receipt-meta { display: flex; justify-content: space-between; font-size: 11px; }
+      .student-details, .payment-info { margin-bottom: 10px; }
+      .student-details table, .payment-info table, .fee-breakdown table { width: 100%; border-collapse: collapse; }
+      .student-details td, .payment-info td { padding: 6px 10px; border: 1px solid #e2e8f0; }
+      .label { color: #4a5568; width: 25%; font-size: 10px; background: #f7fafc; }
+      .value { font-weight: 600; color: #1a202c; }
+      .fee-breakdown { margin: 12px 0; border: 2px solid #1a365d; border-radius: 5px; overflow: hidden; }
+      .fee-breakdown h3 { background: #1a365d; color: white; padding: 6px 10px; font-size: 11px; text-align: center; }
+      .fee-breakdown td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; }
+      .fee-breakdown .label { width: 60%; }
+      .amount-cell { text-align: right; font-size: 12px; }
+      .highlight { background: #c6f6d5; font-size: 14px; color: #22543d; }
+      .pending-row { background: #fed7d7; }
+      .pending-row td { color: #c53030; font-weight: bold; }
+      .paid-row { background: #c6f6d5; }
+      .paid-row td { color: #22543d; font-weight: bold; }
+      .signatures { display: flex; justify-content: space-between; margin-top: 25px; padding-top: 35px; }
+      .signature { text-align: center; width: 35%; border-top: 1px solid #2d3748; padding-top: 5px; }
+      .signature p { font-size: 10px; color: #4a5568; }
+      .signature small { font-size: 8px; color: #718096; }
+      .divider { border-top: 2px dashed #a0aec0; margin: 10px 0; }
+    `;
+    
+    printWindow.document.write('<html><head><title>Fee Receipt - ETI Educom</title>');
+    printWindow.document.write('<style>' + cssStyles + '</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(receiptHTML.replace('COPY_TYPE', 'STUDENT COPY'));
+    printWindow.document.write('<div class="divider"></div>');
+    printWindow.document.write(receiptHTML.replace('COPY_TYPE', 'CENTER COPY'));
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    setTimeout(() => { printWindow.print(); }, 500);
   };
 
   const handleCancelEnrollment = async () => {
@@ -96,7 +329,7 @@ const StudentsPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold tracking-tight mb-2">Students</h1>
-          <p className="text-slate-600">View enrolled students and their details</p>
+          <p className="text-slate-600">View enrolled students and manage fee payments</p>
         </div>
       </div>
 
@@ -203,14 +436,30 @@ const StudentsPage = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => viewDetails(student)}
-                        data-testid={`view-student-${student.id}`}
-                      >
-                        <Eye className="w-4 h-4 text-blue-500" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        {/* Pay Fee Button */}
+                        {canPay && (student.total_paid || 0) < (student.final_fee || 0) && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => openPaymentDialog(student)}
+                            data-testid={`pay-fee-${student.id}`}
+                          >
+                            <Wallet className="w-4 h-4 mr-1" />
+                            Pay Fee
+                          </Button>
+                        )}
+                        {/* View Details Button */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => viewDetails(student)}
+                          data-testid={`view-student-${student.id}`}
+                        >
+                          <Eye className="w-4 h-4 text-blue-500" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -224,6 +473,196 @@ const StudentsPage = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Payment Dialog */}
+      <Dialog open={paymentDialog} onOpenChange={setPaymentDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-green-600" />
+              Record Fee Payment
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedStudent && (
+            <div className="space-y-4">
+              {/* Student Info */}
+              <div className="bg-slate-50 p-3 rounded-lg">
+                <p className="font-medium">{selectedStudent.student_name}</p>
+                <p className="text-sm text-slate-500">{selectedStudent.enrollment_id}</p>
+                <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-slate-200">
+                  <div>
+                    <p className="text-xs text-slate-500">Total Fee</p>
+                    <p className="font-bold text-slate-800">₹{(selectedStudent.final_fee || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Paid</p>
+                    <p className="font-bold text-green-600">₹{(selectedStudent.total_paid || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Pending</p>
+                    <p className="font-bold text-amber-600">₹{((selectedStudent.final_fee || 0) - (selectedStudent.total_paid || 0)).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Installment Selection (if installment plan) */}
+              {installments.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Select Installment</Label>
+                  <Select 
+                    value={paymentForm.installment_number} 
+                    onValueChange={handleInstallmentSelect}
+                  >
+                    <SelectTrigger data-testid="installment-select">
+                      <SelectValue placeholder="Choose installment" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {installments.map((inst) => (
+                        <SelectItem 
+                          key={inst.installment_number} 
+                          value={inst.installment_number.toString()}
+                          disabled={inst.is_paid}
+                        >
+                          <div className="flex items-center justify-between w-full gap-4">
+                            <span>Installment {inst.installment_number}</span>
+                            <span className="font-semibold">₹{inst.amount.toLocaleString()}</span>
+                            {inst.is_paid && <Badge className="bg-green-100 text-green-700 ml-2">Paid</Badge>}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Amount */}
+              <div className="space-y-2">
+                <Label>Amount (₹) *</Label>
+                <Input
+                  type="number"
+                  value={paymentForm.amount}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                  placeholder="Enter amount"
+                  data-testid="payment-amount"
+                />
+                <p className="text-xs text-slate-500">
+                  Max: ₹{((selectedStudent.final_fee || 0) - (selectedStudent.total_paid || 0)).toLocaleString()}
+                </p>
+              </div>
+
+              {/* Payment Mode */}
+              <div className="space-y-2">
+                <Label>Payment Mode *</Label>
+                <Select 
+                  value={paymentForm.payment_mode} 
+                  onValueChange={(v) => setPaymentForm({ ...paymentForm, payment_mode: v })}
+                >
+                  <SelectTrigger data-testid="payment-mode">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_MODES.map((mode) => (
+                      <SelectItem key={mode} value={mode}>{mode}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Payment Date */}
+              <div className="space-y-2">
+                <Label>Payment Date *</Label>
+                <Input
+                  type="date"
+                  value={paymentForm.payment_date}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })}
+                  data-testid="payment-date"
+                />
+              </div>
+
+              {/* Remarks */}
+              <div className="space-y-2">
+                <Label>Remarks (Optional)</Label>
+                <Input
+                  value={paymentForm.remarks}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, remarks: e.target.value })}
+                  placeholder="Any additional notes..."
+                  data-testid="payment-remarks"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setPaymentDialog(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleRecordPayment}
+                  disabled={savingPayment}
+                  className="bg-green-600 hover:bg-green-700"
+                  data-testid="save-payment-btn"
+                >
+                  {savingPayment ? 'Saving...' : 'Save Payment'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt Dialog */}
+      <Dialog open={receiptDialog} onOpenChange={setReceiptDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Payment Successful!</span>
+              <Button onClick={handlePrintReceipt} className="bg-slate-900 hover:bg-slate-800" data-testid="print-receipt-btn">
+                <Printer className="w-4 h-4 mr-2" /> Print Receipt
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {receiptData && (
+            <div className="space-y-4">
+              <div className="bg-green-50 p-4 rounded-lg text-center">
+                <p className="text-sm text-green-600">Amount Received</p>
+                <p className="text-3xl font-bold text-green-700">₹{receiptData.amount?.toLocaleString()}</p>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Receipt No:</span>
+                  <span className="font-mono font-medium">{receiptData.receipt_number}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Student:</span>
+                  <span className="font-medium">{receiptData.student_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Payment Mode:</span>
+                  <span>{receiptData.payment_mode}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Total Paid:</span>
+                  <span className="font-medium text-green-600">₹{receiptData.total_paid?.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Pending:</span>
+                  <span className="font-medium text-amber-600">
+                    ₹{((receiptData.total_fee || 0) - (receiptData.total_paid || 0)).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={() => setReceiptDialog(false)}
+              >
+                Close
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Student Details Dialog */}
       <Dialog open={detailsDialog} onOpenChange={setDetailsDialog}>
