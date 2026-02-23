@@ -289,12 +289,31 @@ All high-priority features completed.
 - GET /api/admin/branches/{branch_id}/webhook-info - Get webhook URL and instructions
 - POST /api/admin/branches/{branch_id}/regenerate-webhook-key - Regenerate webhook key
 
+### Certificate Management
+- GET /api/public/enrollment/{enrollment_number} - Public: Fetch enrollment for certificate request
+- POST /api/public/certificate-requests - Public: Submit certificate request
+- GET /api/public/verify/{verification_id} - Public: Verify certificate authenticity
+- GET /api/certificate-requests - List all requests (Certificate Manager/Admin)
+- GET /api/certificate-requests/{id} - Get single request details
+- PUT /api/certificate-requests/{id} - Update request details
+- POST /api/certificate-requests/{id}/approve - Approve request
+- POST /api/certificate-requests/{id}/reject - Reject request with reason
+- POST /api/certificate-requests/{id}/download - Download certificate data & mark as Ready
+
 ## Test Credentials
 - Super Admin: admin@etieducom.com / admin@123
 - Branch Admin (test): director@etieducom.com / test123
+- Certificate Manager: certmanager@etieducom.com / cert@123
+- Test Enrollment: PBPTKE0001
+
+## Public URLs
+- Certificate Request Form: /certificate-request
+- Certificate Verification: /verify/{verification_id}
+- Public Quiz Exam: /exam/{exam_id}
 
 ## Known Issues/Notes
 - MSG91 WhatsApp integration is FUNCTIONAL but registered number needs to be configured
 - VAPID keys for browser push notifications are using test/default values - should be generated for production
+- Certificate PDF is generated on frontend using canvas - works in modern browsers
 - Reports page enhancement pending
 - Database migrations are manual - if Pydantic models change, existing documents need migration scripts
