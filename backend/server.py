@@ -3649,6 +3649,305 @@ async def get_overdue_followups(current_user: User = Depends(get_current_user)):
 # TASK NOTIFICATIONS - Auto-notify on task assignment
 # ============================================
 
+# ============================================
+# CERTIFICATE MANAGEMENT SYSTEM
+# ============================================
+
+async def generate_certificate_id():
+    """Generate unique certificate ID: ETI-2025-00001"""
+    year = datetime.now().year
+    # Get the count of certificates this year
+    count = await db.certificate_requests.count_documents({
+        "created_at": {"$regex": f"^{year}"}
+    })
+    return f"ETI-{year}-{str(count + 1).zfill(5)}"
+
+async def generate_verification_id():
+    """Generate unique verification ID for QR code"""
+    import secrets
+    return secrets.token_urlsafe(16)
+
+@api_router.get("/public/enrollment/{enrollment_number}")
+async def get_enrollment_for_certificate(enrollment_number: str):
+    """Public endpoint to fetch enrollment details for certificate request"""
+    enrollment = await db.enrollments.find_one(
+        {"enrollment_id": enrollment_number},
+        {"_id": 0}
+    )
+    
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+    
+    # Get branch details
+    branch = await db.branches.find_one({"id": enrollment['branch_id']}, {"_id": 0, "name": 1})
+    
+    # Get program details
+    program = await db.programs.find_one({"id": enrollment['program_id']}, {"_id": 0, "name": 1, "duration": 1})
+    
+    return {
+        "student_name": enrollment['student_name'],
+        "program_name": program['name'] if program else enrollment.get('program_name', ''),
+        "program_duration": program['duration'] if program else '',
+        "branch_name": branch['name'] if branch else '',
+        "branch_id": enrollment['branch_id'],
+        "enrollment_id": enrollment['id'],
+        "enrollment_number": enrollment['enrollment_id']
+    }
+
+@api_router.post("/public/certificate-requests")
+async def create_certificate_request(request_data: CertificateRequestCreate):
+    """Public endpoint for students to request certificates"""
+    # Fetch enrollment
+    enrollment = await db.enrollments.find_one(
+        {"enrollment_id": request_data.enrollment_number},
+        {"_id": 0}
+    )
+    
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Enrollment not found with this ID")
+    
+    # Check if there's already a pending/approved request
+    existing = await db.certificate_requests.find_one({
+        "enrollment_number": request_data.enrollment_number,
+        "status": {"$in": ["Pending", "Approved"]}
+    })
+    
+    if existing:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"A certificate request already exists with status: {existing['status']}"
+        )
+    
+    # Get branch and program details
+    branch = await db.branches.find_one({"id": enrollment['branch_id']}, {"_id": 0, "name": 1})
+    program = await db.programs.find_one({"id": enrollment['program_id']}, {"_id": 0, "name": 1, "duration": 1})
+    
+    # Generate IDs
+    certificate_id = await generate_certificate_id()
+    verification_id = await generate_verification_id()
+    registration_number = f"ETI-STU-{str(await db.certificate_requests.count_documents({}) + 1).zfill(4)}"
+    
+    # Create certificate request
+    cert_request = CertificateRequest(
+        certificate_id=certificate_id,
+        enrollment_id=enrollment['id'],
+        enrollment_number=request_data.enrollment_number,
+        student_name=enrollment['student_name'],
+        program_name=program['name'] if program else enrollment.get('program_name', ''),
+        program_duration=program['duration'] if program else '',
+        branch_name=branch['name'] if branch else '',
+        branch_id=enrollment['branch_id'],
+        email=request_data.email,
+        phone=request_data.phone,
+        program_start_date=request_data.program_start_date,
+        program_end_date=request_data.program_end_date,
+        training_mode=request_data.training_mode,
+        training_hours=request_data.training_hours,
+        registration_number=registration_number,
+        verification_id=verification_id
+    )
+    
+    cert_dict = cert_request.model_dump()
+    cert_dict['created_at'] = cert_dict['created_at'].isoformat()
+    
+    await db.certificate_requests.insert_one(cert_dict)
+    
+    return {
+        "message": "Certificate request submitted successfully",
+        "certificate_id": certificate_id,
+        "status": "Pending"
+    }
+
+@api_router.get("/certificate-requests")
+async def get_certificate_requests(
+    status: Optional[str] = None,
+    branch_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get all certificate requests - Certificate Manager or Admin"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.CERTIFICATE_MANAGER]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    query = {}
+    if status:
+        query["status"] = status
+    if branch_id:
+        query["branch_id"] = branch_id
+    
+    requests = await db.certificate_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return requests
+
+@api_router.get("/certificate-requests/{request_id}")
+async def get_certificate_request(request_id: str, current_user: User = Depends(get_current_user)):
+    """Get single certificate request"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.CERTIFICATE_MANAGER]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    request = await db.certificate_requests.find_one({"id": request_id}, {"_id": 0})
+    if not request:
+        raise HTTPException(status_code=404, detail="Certificate request not found")
+    return request
+
+@api_router.put("/certificate-requests/{request_id}")
+async def update_certificate_request(
+    request_id: str,
+    update_data: CertificateRequestUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update certificate request - Certificate Manager or Admin"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.CERTIFICATE_MANAGER]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    if update_dict.get('training_mode'):
+        update_dict['training_mode'] = update_dict['training_mode'].value
+    
+    if not update_dict:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    result = await db.certificate_requests.update_one(
+        {"id": request_id},
+        {"$set": update_dict}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Certificate request not found")
+    
+    return {"message": "Certificate request updated successfully"}
+
+@api_router.post("/certificate-requests/{request_id}/approve")
+async def approve_certificate_request(request_id: str, current_user: User = Depends(get_current_user)):
+    """Approve a certificate request"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.CERTIFICATE_MANAGER]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    result = await db.certificate_requests.update_one(
+        {"id": request_id, "status": CertificateStatus.PENDING.value},
+        {"$set": {
+            "status": CertificateStatus.APPROVED.value,
+            "approved_at": datetime.now(timezone.utc).isoformat(),
+            "approved_by": current_user.id,
+            "approved_by_name": current_user.name
+        }}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Certificate request not found or not pending")
+    
+    return {"message": "Certificate request approved"}
+
+@api_router.post("/certificate-requests/{request_id}/reject")
+async def reject_certificate_request(
+    request_id: str,
+    reason: str = "",
+    current_user: User = Depends(get_current_user)
+):
+    """Reject a certificate request"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.CERTIFICATE_MANAGER]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    result = await db.certificate_requests.update_one(
+        {"id": request_id, "status": CertificateStatus.PENDING.value},
+        {"$set": {
+            "status": CertificateStatus.REJECTED.value,
+            "rejection_reason": reason,
+            "approved_at": datetime.now(timezone.utc).isoformat(),
+            "approved_by": current_user.id,
+            "approved_by_name": current_user.name
+        }}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Certificate request not found or not pending")
+    
+    return {"message": "Certificate request rejected"}
+
+@api_router.post("/certificate-requests/{request_id}/download")
+async def download_certificate(request_id: str, current_user: User = Depends(get_current_user)):
+    """Generate and download certificate PDF, mark as ready, send WhatsApp"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.CERTIFICATE_MANAGER]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    cert_request = await db.certificate_requests.find_one({"id": request_id}, {"_id": 0})
+    if not cert_request:
+        raise HTTPException(status_code=404, detail="Certificate request not found")
+    
+    if cert_request['status'] not in [CertificateStatus.APPROVED.value, CertificateStatus.READY.value]:
+        raise HTTPException(status_code=400, detail="Certificate must be approved before download")
+    
+    # Mark as ready if first download
+    if cert_request['status'] == CertificateStatus.APPROVED.value:
+        await db.certificate_requests.update_one(
+            {"id": request_id},
+            {"$set": {
+                "status": CertificateStatus.READY.value,
+                "issued_at": datetime.now(timezone.utc).isoformat(),
+                "issued_by": current_user.id
+            }}
+        )
+        
+        # Send WhatsApp notification
+        await send_whatsapp_notification(
+            cert_request['phone'],
+            "certificate_ready",
+            {
+                "name": cert_request['student_name'],
+                "certificate_id": cert_request['certificate_id'],
+                "course": cert_request['program_name']
+            }
+        )
+    
+    # Return certificate data for PDF generation on frontend
+    return {
+        "certificate_id": cert_request['certificate_id'],
+        "student_name": cert_request['student_name'],
+        "program_name": cert_request['program_name'],
+        "program_duration": cert_request['program_duration'],
+        "branch_name": cert_request['branch_name'],
+        "training_mode": cert_request['training_mode'],
+        "training_hours": cert_request.get('training_hours', 120),
+        "program_start_date": cert_request['program_start_date'],
+        "program_end_date": cert_request['program_end_date'],
+        "registration_number": cert_request['registration_number'],
+        "verification_id": cert_request['verification_id'],
+        "issued_date": datetime.now().strftime("%d-%m-%Y")
+    }
+
+@api_router.get("/public/verify/{verification_id}")
+async def verify_certificate(verification_id: str):
+    """Public endpoint to verify certificate authenticity via QR code"""
+    cert = await db.certificate_requests.find_one(
+        {"verification_id": verification_id},
+        {"_id": 0}
+    )
+    
+    if not cert:
+        return {
+            "verified": False,
+            "message": "Certificate not found or invalid verification code"
+        }
+    
+    if cert['status'] != CertificateStatus.READY.value:
+        return {
+            "verified": False,
+            "message": f"Certificate status: {cert['status']} (not issued yet)"
+        }
+    
+    return {
+        "verified": True,
+        "message": "Certificate is authentic and verified",
+        "certificate_details": {
+            "certificate_id": cert['certificate_id'],
+            "student_name": cert['student_name'],
+            "program_name": cert['program_name'],
+            "program_duration": cert['program_duration'],
+            "branch_name": cert['branch_name'],
+            "training_mode": cert['training_mode'],
+            "issued_date": cert.get('issued_at', ''),
+            "registration_number": cert['registration_number']
+        }
+    }
+
 app.include_router(api_router)
 
 app.add_middleware(
