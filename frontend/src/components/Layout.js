@@ -43,13 +43,15 @@ const Layout = ({ children }) => {
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', show: true },
-    { icon: Users, label: 'Leads', path: '/leads', show: true },
+    { icon: Users, label: 'Leads', path: '/leads', show: !isCertManager },
+    // Certificate Management - For Certificate Manager and Super Admin
+    { icon: Award, label: 'Certificates', path: '/certificates', show: isCertManager || isSuperAdmin },
     // Tasks - For all non-Super Admin users
     { icon: CheckSquare, label: 'Tasks', path: '/tasks', show: isBranchAdmin || isCounsellor || isFDE },
     // Pending Follow-ups - For Counsellors and Branch Admins only
     { icon: Bell, label: 'Pending Follow-ups', path: '/followups', show: isCounsellor || isBranchAdmin, badge: pendingCount },
-    { icon: BarChart3, label: 'Analytics', path: '/analytics', show: true },
-    { icon: FileText, label: 'Reports', path: '/reports', show: true },
+    { icon: BarChart3, label: 'Analytics', path: '/analytics', show: !isCertManager },
+    { icon: FileText, label: 'Reports', path: '/reports', show: !isCertManager },
     // Students - For Branch Admin and FDE
     { icon: GraduationCap, label: 'Students', path: '/students', show: isBranchAdmin || isFDE },
     // Quiz Exams - For Super Admin and FDE
@@ -66,7 +68,7 @@ const Layout = ({ children }) => {
     { icon: CreditCard, label: 'All Payments', path: '/all-payments', show: isBranchAdmin || isFDE },
     // Pending Payments - For Branch Admin and FDE
     { icon: Clock, label: 'Pending Payments', path: '/pending-payments', show: isBranchAdmin || isFDE },
-    { icon: Folder, label: 'Resources', path: '/resources', show: true },
+    { icon: Folder, label: 'Resources', path: '/resources', show: !isCertManager },
     // Deleted Leads - For Super Admin and Branch Admin
     { icon: Trash2, label: 'Deleted Leads', path: '/deleted-leads', show: isSuperAdmin || isBranchAdmin },
     // Admin Panel - ONLY for Super Admin (Branch Admin should NOT see this)
