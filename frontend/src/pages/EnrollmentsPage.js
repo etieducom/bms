@@ -214,11 +214,23 @@ const EnrollmentsPage = () => {
       toast.error('Please enter a valid amount');
       return;
     }
+    
+    // Validate that payment doesn't exceed remaining amount
+    const totalFee = selectedEnrollment?.total_fee || 0;
+    const totalPaid = existingPaymentPlan?.total_paid || 0;
+    const remainingAmount = totalFee - totalPaid;
+    const paymentAmount = parseFloat(paymentForm.amount);
+    
+    if (paymentAmount > remainingAmount) {
+      toast.error(`Payment amount (Rs.${paymentAmount.toLocaleString('en-IN')}) cannot exceed pending fee (Rs.${remainingAmount.toLocaleString('en-IN')})`);
+      return;
+    }
+    
     try {
       const paymentRes = await paymentAPI.createPayment({
         enrollment_id: selectedEnrollment.id,
         payment_plan_id: existingPaymentPlan.id,
-        amount: parseFloat(paymentForm.amount),
+        amount: paymentAmount,
         payment_mode: paymentForm.payment_mode,
         payment_date: paymentForm.payment_date,
         installment_number: paymentForm.installment_number ? parseInt(paymentForm.installment_number) : null,
