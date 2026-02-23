@@ -140,24 +140,57 @@ The user, representing a training institute named "ETI Educom", requested a full
   - [x] PUT /api/notifications/mark-all-read - Mark all notifications as read
   - [x] GET /api/notifications/unread-count - Get unread notification count
 
+### Phase 10: Certificate Management System (COMPLETE - December 23, 2025)
+- [x] New Role: Certificate Manager
+  - [x] Added to UserRole enum and admin panel dropdown
+  - [x] Certificate Manager can access /certificates page
+- [x] Public Certificate Request Form (/certificate-request)
+  - [x] Student enters Enrollment ID to auto-fetch details
+  - [x] Form captures: email, phone, program dates, training mode, hours
+  - [x] GET /api/public/enrollment/{enrollment_number} - Fetch student details
+  - [x] POST /api/public/certificate-requests - Submit new request
+- [x] Certificate Manager Dashboard (/certificates)
+  - [x] Stats cards: Pending, Approved, Issued, Total
+  - [x] Filter tabs by status
+  - [x] View, Edit, Approve, Reject, Download actions
+  - [x] GET /api/certificate-requests - List all requests
+  - [x] PUT /api/certificate-requests/{id} - Edit request details
+  - [x] POST /api/certificate-requests/{id}/approve - Approve request
+  - [x] POST /api/certificate-requests/{id}/reject - Reject with reason
+  - [x] POST /api/certificate-requests/{id}/download - Download certificate
+- [x] PDF Certificate Generation
+  - [x] Uses user-provided background image
+  - [x] Generates on frontend using HTML canvas
+  - [x] Includes student name, program, duration, dates, training mode
+  - [x] Unique QR code for verification
+- [x] Public Certificate Verification (/verify/{verification_id})
+  - [x] GET /api/public/verify/{verification_id} - Verify certificate
+  - [x] Shows verified badge and certificate details
+- [x] WhatsApp Integration
+  - [x] Added "certificate_ready" event to settings
+  - [x] Sends notification when certificate is downloaded
+
+### Phase 11: Security Enhancement (COMPLETE - December 23, 2025)
+- [x] Auto-Logout After Inactivity
+  - [x] ActivityTracker component monitors user activity
+  - [x] 30-minute inactivity timeout
+  - [x] Warning toast shown 2 minutes before logout
+  - [x] Automatic logout and redirect to login page
+
 ## Pending/Backlog
 
 ### P0 - High Priority (None currently)
 All high-priority features completed.
 
 ### P1 - Medium Priority
-- [ ] Certificate Management System (User requested)
-  - Public form for students to request certificates
-  - Admin approval workflow for "Certificate Manager" role
-  - PDF generation with QR code verification
 - [ ] Demo Booking Fields - When lead status changes to "Demo Booked", prompt for demo date, time, trainer
+- [ ] Enhanced Fee Receipt - A4 format with Student/Center copy, logo, address, fee breakdown, T&C
 - [ ] Payment Installment Validation - Prevent sum of installments from exceeding total course fee
 - [ ] International Exams Module - Wire up backend to frontend for exam booking
 
 ### P2 - Low Priority
 - [ ] WhatsApp Fee Reminders (automated background job)
 - [ ] Birthday Wishes automation (daily job to send on student DOB)
-- [ ] Security Enhancement (auto-logout or session-based login)
 - [ ] Code Refactoring
   - Split server.py into routers/models/schemas
   - Add state management to frontend (Zustand/Redux)
