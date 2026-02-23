@@ -613,7 +613,7 @@ const StudentsPage = () => {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         {/* Pay Fee Button */}
-                        {canPay && (student.total_paid || 0) < (student.final_fee || 0) && (
+                        {canPay && (student.total_paid || 0) < (student.final_fee || 0) && student.status === 'Active' && (
                           <Button
                             variant="default"
                             size="sm"
@@ -634,6 +634,23 @@ const StudentsPage = () => {
                         >
                           <Eye className="w-4 h-4 text-blue-500" />
                         </Button>
+                        {/* Status Change Dropdown - Branch Admin/Admin only */}
+                        {(isBranchAdmin || user.role === 'Admin') && (
+                          <Select
+                            value={student.status || 'Active'}
+                            onValueChange={(newStatus) => handleStatusChange(student.id, newStatus)}
+                          >
+                            <SelectTrigger className="w-28 h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Active">Active</SelectItem>
+                              <SelectItem value="Dropped">Dropped</SelectItem>
+                              <SelectItem value="Inactive">Inactive</SelectItem>
+                              <SelectItem value="Completed">Completed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
                       </div>
                     </td>
                   </tr>
