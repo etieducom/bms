@@ -2422,7 +2422,7 @@ async def get_all_payments(
     
     return result
 
-# Pending Payments (Upcoming Installments)
+# Pending Payments (Both One-time and Installments)
 @api_router.get("/payments/pending")
 async def get_pending_payments(
     start_date: Optional[str] = None,
@@ -2432,30 +2432,21 @@ async def get_pending_payments(
     branch_id: Optional[str] = None,
     current_user: User = Depends(get_current_user)
 ):
-    """Get pending/upcoming installments"""
-    # Get all installment plans
-    plan_query = {"plan_type": PaymentPlanType.INSTALLMENTS.value}
-    
-    if current_user.role != UserRole.ADMIN:
-        # Get enrollments for user's branch
-        enrollments = await db.enrollments.find({"branch_id": current_user.branch_id}, {"_id": 0, "id": 1}).to_list(1000)
-        enrollment_ids = [e["id"] for e in enrollments]
-        plan_query["enrollment_id"] = {"$in": enrollment_ids}
-    elif branch_id:
-        enrollments = await db.enrollments.find({"branch_id": branch_id}, {"_id": 0, "id": 1}).to_list(1000)
-        enrollment_ids = [e["id"] for e in enrollments]
-        plan_query["enrollment_id"] = {"$in": enrollment_ids}
-    
-    plans = await db.payment_plans.find(plan_query, {"_id": 0}).to_list(1000)
-    
-    pending_installments = []
+    """Get all pending payments - both one-time and installments"""
+    pending_payments = []
     today = datetime.now(timezone.utc).date().isoformat()
     
-    for plan in plans:
-        enrollment = await db.enrollments.find_one({"id": plan.get('enrollment_id')}, {"_id": 0})
-        if not enrollment:
-            continue
-        
+    # Determine branch filter
+    branch_filter = {}
+    if current_user.role != UserRole.ADMIN:
+        branch_filter["branch_id"] = current_user.branch_id
+    elif branch_id:
+        branch_filter["branch_id"] = branch_id
+    
+    # Get all enrollments for the branch
+    enrollments = await db.enrollments.find(branch_filter, {"_id": 0}).to_list(10000)
+    
+    for enrollment in enrollments:
         # Filter by student name
         if student_name and student_name.lower() not in enrollment.get('student_name', '').lower():
             continue
@@ -2464,40 +2455,92 @@ async def get_pending_payments(
         if contact_number and contact_number not in enrollment.get('phone', ''):
             continue
         
-        # Get installment schedule
-        schedule = await db.installment_schedule.find(
-            {"payment_plan_id": plan['id'], "status": {"$ne": "Paid"}},
-            {"_id": 0}
-        ).to_list(100)
+        final_fee = enrollment.get('final_fee', 0)
+        enrollment_id = enrollment.get('id')
         
-        for inst in schedule:
-            due_date = inst.get('due_date', '')
+        # Get total paid for this enrollment
+        payments = await db.payments.find({"enrollment_id": enrollment_id}, {"_id": 0, "amount": 1}).to_list(1000)
+        total_paid = sum(p.get('amount', 0) for p in payments)
+        pending_amount = final_fee - total_paid
+        
+        if pending_amount <= 0:
+            continue  # Skip fully paid enrollments
+        
+        # Check if this enrollment has an installment plan
+        payment_plan = await db.payment_plans.find_one({"enrollment_id": enrollment_id}, {"_id": 0})
+        
+        if payment_plan and payment_plan.get('plan_type') == PaymentPlanType.INSTALLMENTS.value:
+            # Get unpaid installments from schedule
+            schedule = await db.installment_schedule.find(
+                {"payment_plan_id": payment_plan['id'], "status": {"$ne": "Paid"}},
+                {"_id": 0}
+            ).to_list(100)
             
-            # Date filters
-            if start_date and due_date < start_date:
+            for inst in schedule:
+                due_date = inst.get('due_date', '')
+                
+                # Date filters
+                if start_date and due_date < start_date:
+                    continue
+                if end_date and due_date > end_date:
+                    continue
+                
+                is_overdue = due_date < today
+                
+                pending_payments.append({
+                    "type": "installment",
+                    "enrollment_id": enrollment_id,
+                    "student_name": enrollment.get('student_name', ''),
+                    "student_phone": enrollment.get('phone', ''),
+                    "student_email": enrollment.get('email', ''),
+                    "program_name": enrollment.get('program_name', ''),
+                    "installment_number": inst.get('installment_number'),
+                    "amount": inst.get('amount'),
+                    "due_date": due_date,
+                    "is_overdue": is_overdue,
+                    "payment_plan_id": payment_plan['id'],
+                    "total_installments": payment_plan.get('installments_count', 0),
+                    "total_fee": final_fee,
+                    "total_paid": total_paid,
+                    "pending_amount": pending_amount
+                })
+        else:
+            # One-time payment - not fully paid yet
+            # Use enrollment date as reference for due date
+            enrollment_date = enrollment.get('enrollment_date', today)
+            
+            # Date filters for one-time (use enrollment date as reference)
+            if start_date and enrollment_date < start_date:
                 continue
-            if end_date and due_date > end_date:
+            if end_date and enrollment_date > end_date:
                 continue
             
-            is_overdue = due_date < today
+            # Consider it overdue if enrollment was more than 30 days ago
+            enrollment_date_obj = datetime.fromisoformat(enrollment_date).date() if isinstance(enrollment_date, str) else enrollment_date
+            today_obj = datetime.fromisoformat(today).date() if isinstance(today, str) else today
+            days_since_enrollment = (today_obj - enrollment_date_obj).days if hasattr(enrollment_date_obj, 'days') or isinstance(enrollment_date_obj, date) else 0
+            is_overdue = days_since_enrollment > 30 and pending_amount > 0
             
-            pending_installments.append({
-                "enrollment_id": plan['enrollment_id'],
+            pending_payments.append({
+                "type": "one_time",
+                "enrollment_id": enrollment_id,
                 "student_name": enrollment.get('student_name', ''),
                 "student_phone": enrollment.get('phone', ''),
                 "student_email": enrollment.get('email', ''),
                 "program_name": enrollment.get('program_name', ''),
-                "installment_number": inst.get('installment_number'),
-                "amount": inst.get('amount'),
-                "due_date": due_date,
+                "installment_number": None,
+                "amount": pending_amount,
+                "due_date": enrollment_date,
                 "is_overdue": is_overdue,
-                "payment_plan_id": plan['id'],
-                "total_installments": plan.get('installments_count', 0),
-                "total_fee": enrollment.get('final_fee', 0)
+                "payment_plan_id": None,
+                "total_installments": 0,
+                "total_fee": final_fee,
+                "total_paid": total_paid,
+                "pending_amount": pending_amount
             })
     
-    # Sort by due date
-    pending_installments.sort(key=lambda x: x['due_date'])
+    # Sort by overdue first, then by due date
+    pending_payments.sort(key=lambda x: (not x['is_overdue'], x['due_date']))
     
     return pending_installments
 
