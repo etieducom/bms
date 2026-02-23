@@ -318,8 +318,8 @@ const LeadsPage = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input
             placeholder="Search by name, email, or phone..."
@@ -330,7 +330,7 @@ const LeadsPage = () => {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-48" data-testid="status-filter">
+          <SelectTrigger className="w-full sm:w-40" data-testid="status-filter">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -342,6 +342,35 @@ const LeadsPage = () => {
             ))}
           </SelectContent>
         </Select>
+        <div className="flex gap-2 items-center">
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="w-36"
+            placeholder="From"
+            data-testid="date-from"
+          />
+          <span className="text-slate-400">to</span>
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="w-36"
+            placeholder="To"
+            data-testid="date-to"
+          />
+          {(dateFrom || dateTo) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setDateFrom(''); setDateTo(''); }}
+              className="text-slate-500"
+            >
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Leads Table */}
