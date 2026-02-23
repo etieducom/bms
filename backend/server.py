@@ -482,6 +482,13 @@ class WhatsAppSettings(BaseModel):
             "namespace": "",
             "variables": ["name"],
             "description": "Birthday wishes sent on student's DOB"
+        },
+        "certificate_ready": {
+            "enabled": True,
+            "template_name": "",
+            "namespace": "",
+            "variables": ["name", "certificate_id", "course"],
+            "description": "When certificate is ready for download"
         }
     })
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
