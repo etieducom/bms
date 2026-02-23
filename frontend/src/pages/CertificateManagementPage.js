@@ -197,27 +197,34 @@ const CertificateManagementPage = () => {
     ctx.fillText(`Date of Issue: ${certData.issued_date}`, 100, 960);
     
     // Generate QR Code
-    const verifyUrl = `${window.location.origin}/verify/${certData.verification_id}`;
-    const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 120, margin: 1 });
-    
-    const qrImage = new Image();
-    await new Promise((resolve) => {
-      qrImage.onload = resolve;
-      qrImage.src = qrDataUrl;
-    });
-    
-    // Draw QR code on bottom right
-    ctx.drawImage(qrImage, canvas.width - 220, 850, 120, 120);
+    try {
+      const verifyUrl = `${window.location.origin}/verify/${certData.verification_id}`;
+      const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 120, margin: 1 });
+      
+      const qrImage = new Image();
+      await new Promise((resolve) => {
+        qrImage.onload = resolve;
+        qrImage.onerror = resolve; // Continue even if QR fails
+        qrImage.src = qrDataUrl;
+      });
+      
+      if (qrImage.complete && qrImage.naturalWidth > 0) {
+        // Draw QR code on bottom right
+        ctx.drawImage(qrImage, canvas.width - 220, 850, 120, 120);
+      }
+    } catch (qrError) {
+      console.warn('QR code generation failed:', qrError);
+    }
     
     // QR label
     ctx.textAlign = 'center';
-    ctx.font = '12px Arial';
+    ctx.font = '12px Arial, sans-serif';
     ctx.fillStyle = '#555';
     ctx.fillText('Scan to Verify', canvas.width - 160, 990);
     
     // Authorized Signatory section
     ctx.textAlign = 'right';
-    ctx.font = '16px Arial';
+    ctx.font = '16px Arial, sans-serif';
     ctx.fillStyle = '#333';
     ctx.fillText('Authorized Signatory', canvas.width - 260, 920);
     ctx.fillText('Academic Head', canvas.width - 260, 945);
@@ -225,11 +232,11 @@ const CertificateManagementPage = () => {
     
     // ISO note at bottom
     ctx.textAlign = 'center';
-    ctx.font = '14px Arial';
+    ctx.font = '14px Arial, sans-serif';
     ctx.fillStyle = '#666';
     ctx.fillText('ISO 9001:2015 Certified | www.etieducom.com', canvas.width / 2, 1100);
     
-    // Download as PNG (or could convert to PDF)
+    // Download as PNG
     const link = document.createElement('a');
     link.download = `Certificate_${certData.certificate_id}.png`;
     link.href = canvas.toDataURL('image/png');
