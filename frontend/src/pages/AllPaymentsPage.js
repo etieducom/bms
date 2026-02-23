@@ -3,12 +3,12 @@ import { paymentAPI, adminAPI } from '@/api/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Search, Filter, Download, CreditCard, Calendar, Trash2, Edit2 } from 'lucide-react';
+import { Search, Filter, CreditCard, Trash2, Edit2, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 
 const PAYMENT_MODES = ['Cash', 'Card', 'UPI', 'Net Banking', 'Cheque'];
@@ -37,7 +37,7 @@ const AllPaymentsPage = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isAdmin = user.role === 'Admin';
   const isBranchAdmin = user.role === 'Branch Admin';
-  const canModify = isBranchAdmin; // Only Branch Admin can edit/delete
+  const canModify = isBranchAdmin;
 
   useEffect(() => {
     fetchData();
@@ -112,6 +112,466 @@ const AllPaymentsPage = () => {
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to update payment');
     }
+  };
+
+  const handlePrintReceipt = async (payment) => {
+    try {
+      const response = await paymentAPI.generateReceipt(payment.id);
+      const receiptData = response.data;
+      printReceipt(receiptData);
+    } catch (error) {
+      toast.error('Failed to generate receipt');
+    }
+  };
+
+  const printReceipt = (receiptData) => {
+    const printWindow = window.open('', '', 'height=1000,width=800');
+    const logoUrl = 'https://etieducom.com/wp-content/uploads/2024/03/eti-educom-logo.png';
+    
+    const nextDueDate = new Date();
+    nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+    nextDueDate.setDate(10);
+    const dueDateStr = nextDueDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    
+    const pendingAmount = (receiptData?.total_fee || 0) - (receiptData?.total_paid || 0);
+    const paymentDateStr = receiptData?.payment_date ? new Date(receiptData.payment_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+    
+    const termsAndConditions = [
+      'Fee once paid is non-refundable and non-transferable.',
+      'This receipt is valid only if accompanied by official payment confirmation.',
+      'Students must maintain 75% attendance to be eligible for certification.',
+      'Course duration and schedule are subject to change with prior notice.',
+      'ETI Educom reserves the right to modify course content as per industry requirements.',
+      'In case of cheque bounce, a penalty of ₹500 will be applicable.',
+      'For any queries, please contact our support team within 7 days of payment.'
+    ];
+    
+    const receiptHTML = `
+      <div class="receipt-copy">
+        <div class="copy-label">COPY_TYPE</div>
+        
+        <!-- Header -->
+        <div class="header">
+          <div class="logo-section">
+            <img src="${logoUrl}" alt="ETI Educom" class="logo" onerror="this.style.display='none'"/>
+          </div>
+          <div class="institute-info">
+            <h1>ETI EDUCOM</h1>
+            <p class="tagline">Professional Training & Skill Development</p>
+            <p class="address">${receiptData?.branch_name || 'ETI Educom'}</p>
+            ${receiptData?.branch_address ? `<p class="address">${receiptData.branch_address}</p>` : ''}
+          </div>
+        </div>
+        
+        <!-- Receipt Title -->
+        <div class="receipt-title">
+          <h2>FEE RECEIPT</h2>
+        </div>
+        
+        <!-- Receipt Meta -->
+        <div class="receipt-meta">
+          <div class="meta-left">
+            <p><strong>Receipt No:</strong> ${receiptData?.receipt_number || 'N/A'}</p>
+            <p><strong>Enrollment ID:</strong> ${receiptData?.enrollment_id || 'N/A'}</p>
+          </div>
+          <div class="meta-right">
+            <p><strong>Date:</strong> ${paymentDateStr}</p>
+          </div>
+        </div>
+        
+        <!-- Student Details -->
+        <div class="section">
+          <h3>Student Information</h3>
+          <table class="info-table">
+            <tr>
+              <td class="label">Student Name</td>
+              <td class="value" colspan="3">${receiptData?.student_name || ''}</td>
+            </tr>
+            <tr>
+              <td class="label">Phone</td>
+              <td class="value">${receiptData?.phone || ''}</td>
+              <td class="label">Email</td>
+              <td class="value">${receiptData?.student_email || ''}</td>
+            </tr>
+            <tr>
+              <td class="label">Course</td>
+              <td class="value" colspan="3">${receiptData?.program_name || ''}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <!-- Fee Details -->
+        <div class="section fee-section">
+          <h3>Fee Details</h3>
+          <table class="fee-table">
+            <tr>
+              <td class="label">Total Course Fee</td>
+              <td class="amount">₹${(receiptData?.total_fee || 0).toLocaleString('en-IN')}/-</td>
+            </tr>
+            <tr class="highlight-row">
+              <td class="label">Amount Paid (This Receipt)</td>
+              <td class="amount highlight">₹${(receiptData?.amount || 0).toLocaleString('en-IN')}/-</td>
+            </tr>
+            <tr>
+              <td class="label">Total Amount Paid (Till Date)</td>
+              <td class="amount">₹${(receiptData?.total_paid || 0).toLocaleString('en-IN')}/-</td>
+            </tr>
+            <tr class="${pendingAmount > 0 ? 'pending-row' : 'paid-row'}">
+              <td class="label">Balance Amount</td>
+              <td class="amount">${pendingAmount > 0 ? '₹' + pendingAmount.toLocaleString('en-IN') + '/-' : 'NIL'}</td>
+            </tr>
+            ${pendingAmount > 0 ? `
+            <tr>
+              <td class="label">Next Due Date</td>
+              <td class="amount">${dueDateStr}</td>
+            </tr>
+            ` : ''}
+          </table>
+        </div>
+        
+        <!-- Payment Info -->
+        <div class="payment-info">
+          <p><strong>Payment Mode:</strong> ${receiptData?.payment_mode || ''}</p>
+          ${receiptData?.remarks ? `<p><strong>Remarks:</strong> ${receiptData.remarks}</p>` : ''}
+        </div>
+        
+        <!-- Terms & Conditions -->
+        <div class="terms-section">
+          <h4>Terms & Conditions</h4>
+          <ol>
+            ${termsAndConditions.map(term => `<li>${term}</li>`).join('')}
+          </ol>
+        </div>
+        
+        <!-- Signatures -->
+        <div class="signatures">
+          <div class="signature">
+            <div class="sign-line"></div>
+            <p>Student Signature</p>
+          </div>
+          <div class="signature authorized">
+            <div class="sign-line"></div>
+            <p>Authorized Signatory</p>
+            <small>ETI Educom</small>
+          </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+          <p>Thank you for choosing ETI Educom!</p>
+          <p class="small">This is a computer generated receipt.</p>
+        </div>
+      </div>
+    `;
+    
+    const cssStyles = `
+      @page { 
+        size: A4; 
+        margin: 10mm; 
+      }
+      * { 
+        box-sizing: border-box; 
+        margin: 0; 
+        padding: 0; 
+      }
+      body { 
+        font-family: 'Segoe UI', 'Arial', sans-serif; 
+        font-size: 11px; 
+        line-height: 1.5; 
+        color: #1a202c;
+        background: #f7fafc;
+      }
+      .receipt-copy { 
+        border: 2px solid #1a365d; 
+        padding: 20px; 
+        margin-bottom: 15px; 
+        position: relative; 
+        background: white;
+        page-break-inside: avoid;
+      }
+      .copy-label { 
+        position: absolute; 
+        top: -1px; 
+        right: 20px; 
+        background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%); 
+        color: white; 
+        padding: 5px 20px; 
+        font-size: 10px; 
+        font-weight: bold; 
+        border-radius: 0 0 8px 8px;
+        letter-spacing: 1px;
+      }
+      
+      /* Header */
+      .header { 
+        display: flex; 
+        align-items: center; 
+        border-bottom: 2px solid #1a365d; 
+        padding-bottom: 15px; 
+        margin-bottom: 15px; 
+      }
+      .logo-section { 
+        width: 80px; 
+        margin-right: 15px; 
+      }
+      .logo { 
+        width: 70px; 
+        height: auto; 
+      }
+      .institute-info { 
+        flex: 1; 
+      }
+      .institute-info h1 { 
+        font-size: 24px; 
+        color: #1a365d; 
+        letter-spacing: 3px; 
+        margin-bottom: 3px; 
+      }
+      .institute-info .tagline { 
+        font-size: 11px; 
+        color: #4a5568; 
+        font-style: italic; 
+      }
+      .institute-info .address { 
+        font-size: 10px; 
+        color: #718096; 
+        margin-top: 3px; 
+      }
+      
+      /* Receipt Title */
+      .receipt-title { 
+        text-align: center; 
+        background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%); 
+        color: white; 
+        padding: 10px 20px; 
+        margin-bottom: 15px; 
+        border-radius: 5px; 
+      }
+      .receipt-title h2 { 
+        font-size: 16px; 
+        letter-spacing: 3px; 
+        font-weight: 600; 
+      }
+      
+      /* Receipt Meta */
+      .receipt-meta { 
+        display: flex; 
+        justify-content: space-between; 
+        background: #f7fafc; 
+        padding: 10px 15px; 
+        border-radius: 5px; 
+        margin-bottom: 15px;
+        border: 1px solid #e2e8f0;
+      }
+      .receipt-meta p { 
+        font-size: 11px; 
+        margin: 2px 0; 
+      }
+      
+      /* Sections */
+      .section { 
+        margin-bottom: 15px; 
+      }
+      .section h3 { 
+        font-size: 12px; 
+        color: #1a365d; 
+        border-bottom: 1px solid #e2e8f0; 
+        padding-bottom: 5px; 
+        margin-bottom: 10px; 
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      
+      /* Info Table */
+      .info-table { 
+        width: 100%; 
+        border-collapse: collapse; 
+      }
+      .info-table td { 
+        padding: 8px 10px; 
+        border: 1px solid #e2e8f0; 
+      }
+      .info-table .label { 
+        background: #f7fafc; 
+        color: #4a5568; 
+        font-size: 10px; 
+        width: 20%; 
+        font-weight: 500;
+      }
+      .info-table .value { 
+        font-weight: 600; 
+        color: #1a202c; 
+      }
+      
+      /* Fee Table */
+      .fee-section { 
+        border: 2px solid #1a365d; 
+        border-radius: 5px; 
+        overflow: hidden; 
+      }
+      .fee-section h3 { 
+        background: #1a365d; 
+        color: white; 
+        padding: 8px 15px; 
+        margin: 0; 
+        border: none; 
+      }
+      .fee-table { 
+        width: 100%; 
+        border-collapse: collapse; 
+      }
+      .fee-table td { 
+        padding: 10px 15px; 
+        border-bottom: 1px solid #e2e8f0; 
+      }
+      .fee-table .label { 
+        color: #4a5568; 
+        width: 60%; 
+      }
+      .fee-table .amount { 
+        text-align: right; 
+        font-weight: 600; 
+        font-size: 12px; 
+      }
+      .fee-table .highlight-row { 
+        background: #c6f6d5; 
+      }
+      .fee-table .highlight { 
+        color: #22543d; 
+        font-size: 14px; 
+      }
+      .fee-table .pending-row { 
+        background: #fed7d7; 
+      }
+      .fee-table .pending-row td { 
+        color: #c53030; 
+      }
+      .fee-table .paid-row { 
+        background: #c6f6d5; 
+      }
+      .fee-table .paid-row td { 
+        color: #22543d; 
+      }
+      
+      /* Payment Info */
+      .payment-info { 
+        background: #f7fafc; 
+        padding: 10px 15px; 
+        border-radius: 5px; 
+        margin: 15px 0;
+        border: 1px solid #e2e8f0;
+      }
+      .payment-info p { 
+        margin: 3px 0; 
+        font-size: 11px; 
+      }
+      
+      /* Terms & Conditions */
+      .terms-section { 
+        margin: 15px 0; 
+        padding: 10px 15px;
+        background: #fffaf0;
+        border: 1px solid #fbd38d;
+        border-radius: 5px;
+      }
+      .terms-section h4 { 
+        font-size: 10px; 
+        color: #744210; 
+        margin-bottom: 8px; 
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .terms-section ol { 
+        margin: 0; 
+        padding-left: 15px; 
+      }
+      .terms-section li { 
+        font-size: 8px; 
+        color: #744210; 
+        margin-bottom: 3px;
+        line-height: 1.4;
+      }
+      
+      /* Signatures */
+      .signatures { 
+        display: flex; 
+        justify-content: space-between; 
+        margin-top: 30px; 
+        padding-top: 20px; 
+      }
+      .signature { 
+        text-align: center; 
+        width: 35%; 
+      }
+      .sign-line { 
+        border-top: 1px solid #2d3748; 
+        margin-bottom: 5px; 
+        width: 100%;
+      }
+      .signature p { 
+        font-size: 10px; 
+        color: #4a5568; 
+      }
+      .signature small { 
+        font-size: 8px; 
+        color: #718096; 
+      }
+      
+      /* Footer */
+      .footer { 
+        text-align: center; 
+        margin-top: 15px; 
+        padding-top: 10px; 
+        border-top: 1px dashed #cbd5e0; 
+      }
+      .footer p { 
+        font-size: 10px; 
+        color: #4a5568; 
+      }
+      .footer .small { 
+        font-size: 8px; 
+        color: #a0aec0; 
+        margin-top: 3px; 
+      }
+      
+      /* Divider between copies */
+      .divider { 
+        border-top: 2px dashed #a0aec0; 
+        margin: 15px 0; 
+        position: relative;
+      }
+      .divider::after {
+        content: '✂';
+        position: absolute;
+        left: 50%;
+        top: -8px;
+        transform: translateX(-50%);
+        background: #f7fafc;
+        padding: 0 10px;
+        color: #a0aec0;
+      }
+      
+      @media print {
+        body { background: white; }
+        .receipt-copy { border-color: #000; }
+      }
+    `;
+    
+    printWindow.document.write('<!DOCTYPE html><html><head>');
+    printWindow.document.write('<title>Fee Receipt - ETI Educom</title>');
+    printWindow.document.write('<meta charset="UTF-8">');
+    printWindow.document.write('<style>' + cssStyles + '</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(receiptHTML.replace('COPY_TYPE', 'STUDENT COPY'));
+    printWindow.document.write('<div class="divider"></div>');
+    printWindow.document.write(receiptHTML.replace('COPY_TYPE', 'CENTER COPY'));
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    
+    setTimeout(() => { 
+      printWindow.focus();
+      printWindow.print(); 
+    }, 500);
   };
 
   const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -258,9 +718,7 @@ const AllPaymentsPage = () => {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Amount</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Mode</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Installment</th>
-                  {canModify && (
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Actions</th>
-                  )}
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -291,28 +749,40 @@ const AllPaymentsPage = () => {
                     <td className="px-4 py-3 text-sm">
                       {payment.installment_number ? `#${payment.installment_number}` : '-'}
                     </td>
-                    {canModify && (
-                      <td className="px-4 py-3">
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(payment)}
-                            data-testid={`edit-payment-${payment.id}`}
-                          >
-                            <Edit2 className="w-4 h-4 text-blue-500" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(payment.id)}
-                            data-testid={`delete-payment-${payment.id}`}
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </td>
-                    )}
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1">
+                        {/* Print Receipt Button */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handlePrintReceipt(payment)}
+                          title="Print Receipt"
+                          data-testid={`print-receipt-${payment.id}`}
+                        >
+                          <Printer className="w-4 h-4 text-green-600" />
+                        </Button>
+                        {canModify && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(payment)}
+                              data-testid={`edit-payment-${payment.id}`}
+                            >
+                              <Edit2 className="w-4 h-4 text-blue-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(payment.id)}
+                              data-testid={`delete-payment-${payment.id}`}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -361,6 +831,7 @@ const AllPaymentsPage = () => {
                 type="date"
                 value={editForm.payment_date}
                 onChange={(e) => setEditForm({ ...editForm, payment_date: e.target.value })}
+                required
               />
             </div>
             <div className="space-y-2">
@@ -372,8 +843,12 @@ const AllPaymentsPage = () => {
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setEditDialog(false)}>Cancel</Button>
-              <Button type="submit" className="bg-slate-900 hover:bg-slate-800">Update Payment</Button>
+              <Button type="button" variant="outline" onClick={() => setEditDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-slate-900 hover:bg-slate-800">
+                Update Payment
+              </Button>
             </div>
           </form>
         </DialogContent>
