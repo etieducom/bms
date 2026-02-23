@@ -2884,7 +2884,7 @@ async def update_enrollment_status(enrollment_id: str, status: str, reason: str 
 # Task Management Endpoints
 @api_router.post("/tasks")
 async def create_task(task: TaskCreate, current_user: User = Depends(get_current_user)):
-    """Create a task - Branch Admin only"""
+    """Create a task - Branch Admin only. Automatically notifies assigned user."""
     if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_ADMIN]:
         raise HTTPException(status_code=403, detail="Only Branch Admin can create tasks")
     
@@ -2913,7 +2913,27 @@ async def create_task(task: TaskCreate, current_user: User = Depends(get_current
     task_dict['created_at'] = task_dict['created_at'].isoformat()
     
     await db.tasks.insert_one(task_dict)
-    return {"message": "Task created successfully", "task_id": new_task.id}
+    
+    # Create in-app notification for the assigned user
+    task_notification = PushNotification(
+        sender_id=current_user.id,
+        sender_name=current_user.name,
+        sender_role=current_user.role.value,
+        recipient_ids=[task.assigned_to],
+        branch_id=current_user.branch_id or assigned_user.get('branch_id'),
+        title="New Task Assigned",
+        message=f"{current_user.name} assigned you a new task: {task.title}",
+        notification_type="task"
+    )
+    
+    notif_dict = task_notification.model_dump()
+    notif_dict['created_at'] = notif_dict['created_at'].isoformat()
+    
+    await db.notifications.insert_one(notif_dict)
+    
+    logging.info(f"Task '{task.title}' assigned to {assigned_user['name']} by {current_user.name}")
+    
+    return {"message": "Task created and notification sent", "task_id": new_task.id}
 
 @api_router.get("/tasks")
 async def get_tasks(current_user: User = Depends(get_current_user)):
