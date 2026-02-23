@@ -3295,6 +3295,246 @@ async def get_quiz_attempts(exam_id: Optional[str] = None, current_user: User = 
             a['completed_at'] = datetime.fromisoformat(a['completed_at'])
     return attempts
 
+# ============================================
+# WEBHOOK ENDPOINTS - External Lead Capture
+# ============================================
+
+@api_router.post("/webhooks/leads/{webhook_key}")
+async def webhook_lead_capture(webhook_key: str, lead_data: WebhookLeadCreate):
+    """
+    Public webhook endpoint for capturing leads from Google Ads, Meta (Facebook), etc.
+    Each branch has a unique webhook_key for security.
+    
+    Example URLs:
+    - Google Ads: https://yourapp.com/api/webhooks/leads/{branch_webhook_key}
+    - Meta/Facebook: https://yourapp.com/api/webhooks/leads/{branch_webhook_key}
+    """
+    # Find branch by webhook key
+    branch = await db.branches.find_one({"webhook_key": webhook_key}, {"_id": 0})
+    if not branch:
+        raise HTTPException(status_code=404, detail="Invalid webhook key")
+    
+    # Find or create a default program for webhook leads
+    default_program = await db.programs.find_one({}, {"_id": 0})
+    if not default_program:
+        raise HTTPException(status_code=400, detail="No programs configured in the system")
+    
+    # Try to match program by name if provided
+    program = default_program
+    if lead_data.program_name:
+        matched_program = await db.programs.find_one(
+            {"name": {"$regex": lead_data.program_name, "$options": "i"}}, 
+            {"_id": 0}
+        )
+        if matched_program:
+            program = matched_program
+    
+    # Determine lead source
+    source = lead_data.source or "Webhook"
+    if lead_data.campaign:
+        source = f"{source} - {lead_data.campaign}"
+    
+    # Generate custom lead ID
+    custom_lead_id = await generate_custom_id(branch['id'], "L")
+    
+    # Create the lead
+    new_lead = Lead(
+        lead_id=custom_lead_id,
+        name=lead_data.name,
+        number=lead_data.phone,
+        email=lead_data.email or f"webhook_{datetime.now().timestamp()}@placeholder.com",
+        program_id=program['id'],
+        program_name=program['name'],
+        lead_source=source,
+        branch_id=branch['id'],
+        counsellor_id="system",  # System-generated lead
+        city=lead_data.city,
+        state=lead_data.state,
+    )
+    
+    lead_dict = new_lead.model_dump()
+    lead_dict['created_at'] = lead_dict['created_at'].isoformat()
+    lead_dict['updated_at'] = lead_dict['updated_at'].isoformat()
+    lead_dict['webhook_metadata'] = {
+        "campaign": lead_data.campaign,
+        "ad_name": lead_data.ad_name,
+        "form_name": lead_data.form_name,
+        "additional_data": lead_data.additional_data
+    }
+    
+    await db.leads.insert_one(lead_dict)
+    
+    # Send WhatsApp notification for new enquiry
+    await send_whatsapp_notification(
+        new_lead.number, 
+        "enquiry_saved",
+        {"name": new_lead.name, "course": program['name']}
+    )
+    
+    logging.info(f"Webhook lead captured: {new_lead.name} for branch {branch['name']}")
+    
+    return {
+        "success": True,
+        "lead_id": new_lead.lead_id,
+        "message": f"Lead captured successfully for {branch['name']}"
+    }
+
+@api_router.post("/admin/branches/{branch_id}/regenerate-webhook-key")
+async def regenerate_webhook_key(branch_id: str, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """Regenerate webhook key for a branch - Super Admin only"""
+    import secrets
+    new_key = secrets.token_urlsafe(32)
+    
+    result = await db.branches.update_one(
+        {"id": branch_id},
+        {"$set": {"webhook_key": new_key}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    
+    return {"webhook_key": new_key, "message": "Webhook key regenerated successfully"}
+
+@api_router.get("/admin/branches/{branch_id}/webhook-info")
+async def get_branch_webhook_info(branch_id: str, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """Get webhook URL and key for a branch - Super Admin only"""
+    branch = await db.branches.find_one({"id": branch_id}, {"_id": 0})
+    if not branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    
+    # Generate webhook key if not exists
+    if not branch.get('webhook_key'):
+        import secrets
+        webhook_key = secrets.token_urlsafe(32)
+        await db.branches.update_one({"id": branch_id}, {"$set": {"webhook_key": webhook_key}})
+        branch['webhook_key'] = webhook_key
+    
+    base_url = os.environ.get('FRONTEND_URL', os.environ.get('REACT_APP_BACKEND_URL', ''))
+    webhook_url = f"{base_url}/api/webhooks/leads/{branch['webhook_key']}"
+    
+    return {
+        "branch_id": branch_id,
+        "branch_name": branch['name'],
+        "webhook_key": branch['webhook_key'],
+        "webhook_url": webhook_url,
+        "usage_instructions": {
+            "google_ads": "Use this URL as your Google Ads Lead Form Webhook URL",
+            "meta": "Use this URL as your Facebook Lead Ads Webhook URL",
+            "method": "POST",
+            "content_type": "application/json",
+            "sample_payload": {
+                "name": "John Doe",
+                "phone": "9876543210",
+                "email": "john@example.com",
+                "source": "Google Ads",
+                "campaign": "Summer Course 2024",
+                "program_name": "Optional - Will match with existing programs"
+            }
+        }
+    }
+
+# ============================================
+# BROWSER PUSH NOTIFICATION SUBSCRIPTIONS
+# ============================================
+
+@api_router.post("/push-subscriptions")
+async def save_push_subscription(subscription: PushSubscriptionCreate, current_user: User = Depends(get_current_user)):
+    """Save browser push subscription for a user"""
+    # Remove existing subscription for this user/endpoint
+    await db.push_subscriptions.delete_many({
+        "$or": [
+            {"user_id": current_user.id},
+            {"endpoint": subscription.endpoint}
+        ]
+    })
+    
+    new_sub = PushSubscription(
+        user_id=current_user.id,
+        endpoint=subscription.endpoint,
+        keys=subscription.keys
+    )
+    
+    sub_dict = new_sub.model_dump()
+    sub_dict['created_at'] = sub_dict['created_at'].isoformat()
+    
+    await db.push_subscriptions.insert_one(sub_dict)
+    return {"message": "Push subscription saved successfully"}
+
+@api_router.delete("/push-subscriptions")
+async def remove_push_subscription(current_user: User = Depends(get_current_user)):
+    """Remove browser push subscription for current user"""
+    await db.push_subscriptions.delete_many({"user_id": current_user.id})
+    return {"message": "Push subscription removed"}
+
+@api_router.get("/push-subscriptions/vapid-public-key")
+async def get_vapid_public_key():
+    """Get VAPID public key for browser push notifications"""
+    # In production, generate proper VAPID keys
+    vapid_public_key = os.environ.get('VAPID_PUBLIC_KEY', 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U')
+    return {"publicKey": vapid_public_key}
+
+# ============================================
+# FOLLOW-UP REMINDERS - Due Soon Notifications
+# ============================================
+
+@api_router.get("/followups/due-soon")
+async def get_due_soon_followups(current_user: User = Depends(get_current_user)):
+    """
+    Get follow-ups due within the next 10 minutes.
+    Used by frontend to show alarm notifications.
+    """
+    now = datetime.now(timezone.utc)
+    ten_minutes_later = now + timedelta(minutes=10)
+    
+    query = {
+        "status": FollowUpStatus.PENDING.value,
+        "followup_date": {
+            "$gte": now.isoformat(),
+            "$lte": ten_minutes_later.isoformat()
+        }
+    }
+    
+    # Filter by user if not admin
+    if current_user.role != UserRole.ADMIN:
+        query["created_by"] = current_user.id
+    
+    followups = await db.followups.find(query, {"_id": 0}).sort("followup_date", 1).to_list(100)
+    
+    for fu in followups:
+        if isinstance(fu.get('created_at'), str):
+            fu['created_at'] = datetime.fromisoformat(fu['created_at'])
+        if isinstance(fu.get('followup_date'), str):
+            fu['followup_date'] = datetime.fromisoformat(fu['followup_date'])
+    
+    return followups
+
+@api_router.get("/followups/overdue")
+async def get_overdue_followups(current_user: User = Depends(get_current_user)):
+    """Get overdue follow-ups that haven't been completed"""
+    now = datetime.now(timezone.utc)
+    
+    query = {
+        "status": FollowUpStatus.PENDING.value,
+        "followup_date": {"$lt": now.isoformat()}
+    }
+    
+    if current_user.role != UserRole.ADMIN:
+        query["created_by"] = current_user.id
+    
+    followups = await db.followups.find(query, {"_id": 0}).sort("followup_date", 1).to_list(100)
+    
+    for fu in followups:
+        if isinstance(fu.get('created_at'), str):
+            fu['created_at'] = datetime.fromisoformat(fu['created_at'])
+        if isinstance(fu.get('followup_date'), str):
+            fu['followup_date'] = datetime.fromisoformat(fu['followup_date'])
+    
+    return followups
+
+# ============================================
+# TASK NOTIFICATIONS - Auto-notify on task assignment
+# ============================================
+
 app.include_router(api_router)
 
 app.add_middleware(
