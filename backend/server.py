@@ -2542,7 +2542,7 @@ async def get_pending_payments(
     # Sort by overdue first, then by due date
     pending_payments.sort(key=lambda x: (not x['is_overdue'], x['due_date']))
     
-    return pending_installments
+    return pending_payments
 
 # Financial Analytics
 @api_router.get("/analytics/financial/monthly")
