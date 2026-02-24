@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { organizationsAPI, adminAPI } from '@/api/api';
+import { organizationsAPI } from '@/api/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Search, Plus, Building2, Phone, Mail, MapPin, Edit, Trash2, MessageSquare, Calendar, User } from 'lucide-react';
-import { format } from 'date-fns';
+import { Search, Plus, Building2, Phone, MapPin, Edit, Trash2, MessageSquare, Calendar, User } from 'lucide-react';
 
 const ORGANIZATION_TYPES = ['School', 'College'];
 const OUTCOME_OPTIONS = ['Interested', 'Not Interested', 'Call Back', 'Meeting Scheduled', 'Visit Done', 'MOU Signed'];
