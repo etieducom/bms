@@ -3461,6 +3461,290 @@ async def get_organization_followups(org_id: str, current_user: User = Depends(g
     ).sort("created_at", -1).to_list(100)
     return followups
 
+# ========== BATCH MANAGEMENT ==========
+@api_router.get("/trainers")
+async def get_trainers(current_user: User = Depends(get_current_user)):
+    """Get all trainers for batch assignment"""
+    query = {"role": UserRole.TRAINER.value, "is_active": True}
+    if current_user.role not in [UserRole.ADMIN]:
+        query["branch_id"] = current_user.branch_id
+    
+    trainers = await db.users.find(query, {"_id": 0, "hashed_password": 0}).to_list(100)
+    
+    # Get student count for each trainer
+    for trainer in trainers:
+        assignments = await db.student_batch_assignments.find(
+            {"trainer_id": trainer['id']},
+            {"_id": 0, "enrollment_id": 1}
+        ).to_list(1000)
+        unique_students = len(set(a['enrollment_id'] for a in assignments))
+        trainer['student_count'] = unique_students
+    
+    return trainers
+
+@api_router.post("/batches")
+async def create_batch(batch: BatchCreate, current_user: User = Depends(get_current_user)):
+    """Create a new batch"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only Admin or Branch Admin can create batches")
+    
+    # Get program and trainer names
+    program = await db.programs.find_one({"id": batch.program_id}, {"_id": 0, "name": 1})
+    trainer = await db.users.find_one({"id": batch.trainer_id}, {"_id": 0, "name": 1})
+    
+    new_batch = Batch(
+        name=batch.name,
+        program_id=batch.program_id,
+        program_name=program['name'] if program else None,
+        trainer_id=batch.trainer_id,
+        trainer_name=trainer['name'] if trainer else None,
+        branch_id=current_user.branch_id or "main",
+        start_date=batch.start_date,
+        end_date=batch.end_date,
+        timing=batch.timing,
+        max_students=batch.max_students,
+        created_by=current_user.id
+    )
+    
+    batch_dict = new_batch.model_dump()
+    batch_dict['created_at'] = batch_dict['created_at'].isoformat()
+    
+    await db.batches.insert_one(batch_dict)
+    return {"message": "Batch created successfully", "id": new_batch.id}
+
+@api_router.get("/batches")
+async def get_batches(current_user: User = Depends(get_current_user)):
+    """Get all batches"""
+    query = {}
+    if current_user.role not in [UserRole.ADMIN]:
+        query["branch_id"] = current_user.branch_id
+    
+    batches = await db.batches.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Get student count for each batch
+    for batch in batches:
+        assignments = await db.student_batch_assignments.find(
+            {"batch_id": batch['id']},
+            {"_id": 0}
+        ).to_list(100)
+        batch['student_count'] = len(assignments)
+    
+    return batches
+
+@api_router.put("/batches/{batch_id}")
+async def update_batch(batch_id: str, batch: BatchUpdate, current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))):
+    """Update a batch"""
+    existing = await db.batches.find_one({"id": batch_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    
+    update_data = {k: v for k, v in batch.model_dump().items() if v is not None}
+    
+    # Update trainer name if trainer_id changed
+    if 'trainer_id' in update_data:
+        trainer = await db.users.find_one({"id": update_data['trainer_id']}, {"_id": 0, "name": 1})
+        update_data['trainer_name'] = trainer['name'] if trainer else None
+    
+    await db.batches.update_one({"id": batch_id}, {"$set": update_data})
+    return {"message": "Batch updated successfully"}
+
+@api_router.delete("/batches/{batch_id}")
+async def delete_batch(batch_id: str, current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))):
+    """Delete a batch"""
+    result = await db.batches.delete_one({"id": batch_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    
+    # Remove all assignments for this batch
+    await db.student_batch_assignments.delete_many({"batch_id": batch_id})
+    return {"message": "Batch deleted successfully"}
+
+@api_router.post("/batches/{batch_id}/assign-student")
+async def assign_student_to_batch(batch_id: str, data: StudentBatchAssignmentCreate, current_user: User = Depends(get_current_user)):
+    """Assign a student to a batch - Front Desk or above"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_ADMIN, UserRole.FRONT_DESK]:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    # Get batch details
+    batch = await db.batches.find_one({"id": batch_id}, {"_id": 0})
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    
+    # Get enrollment details
+    enrollment = await db.enrollments.find_one({"id": data.enrollment_id}, {"_id": 0})
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Student enrollment not found")
+    
+    # Check if already assigned to this batch
+    existing = await db.student_batch_assignments.find_one({
+        "enrollment_id": data.enrollment_id,
+        "batch_id": batch_id
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Student already assigned to this batch")
+    
+    assignment = StudentBatchAssignment(
+        enrollment_id=data.enrollment_id,
+        student_name=enrollment.get('student_name'),
+        batch_id=batch_id,
+        batch_name=batch.get('name'),
+        trainer_id=batch.get('trainer_id'),
+        trainer_name=batch.get('trainer_name'),
+        assigned_by=current_user.id
+    )
+    
+    assignment_dict = assignment.model_dump()
+    assignment_dict['assigned_at'] = assignment_dict['assigned_at'].isoformat()
+    
+    await db.student_batch_assignments.insert_one(assignment_dict)
+    return {"message": f"Student assigned to batch '{batch.get('name')}' successfully"}
+
+@api_router.delete("/batches/{batch_id}/remove-student/{enrollment_id}")
+async def remove_student_from_batch(batch_id: str, enrollment_id: str, current_user: User = Depends(get_current_user)):
+    """Remove a student from a batch"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_ADMIN, UserRole.FRONT_DESK]:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    result = await db.student_batch_assignments.delete_one({
+        "batch_id": batch_id,
+        "enrollment_id": enrollment_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    
+    return {"message": "Student removed from batch successfully"}
+
+@api_router.get("/batches/{batch_id}/students")
+async def get_batch_students(batch_id: str, current_user: User = Depends(get_current_user)):
+    """Get all students in a batch"""
+    assignments = await db.student_batch_assignments.find(
+        {"batch_id": batch_id},
+        {"_id": 0}
+    ).to_list(100)
+    
+    students = []
+    for a in assignments:
+        enrollment = await db.enrollments.find_one({"id": a['enrollment_id']}, {"_id": 0})
+        if enrollment:
+            students.append({
+                **a,
+                "phone": enrollment.get('phone'),
+                "email": enrollment.get('email'),
+                "program_name": enrollment.get('program_name')
+            })
+    
+    return students
+
+@api_router.get("/students/{enrollment_id}/batches")
+async def get_student_batches(enrollment_id: str, current_user: User = Depends(get_current_user)):
+    """Get all batches a student is assigned to"""
+    assignments = await db.student_batch_assignments.find(
+        {"enrollment_id": enrollment_id},
+        {"_id": 0}
+    ).to_list(100)
+    return assignments
+
+@api_router.get("/trainer-stats")
+async def get_trainer_stats(current_user: User = Depends(get_current_user)):
+    """Get trainer-wise student statistics for Branch Admin dashboard"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only Admin or Branch Admin can view trainer stats")
+    
+    query = {"role": UserRole.TRAINER.value}
+    if current_user.role != UserRole.ADMIN:
+        query["branch_id"] = current_user.branch_id
+    
+    trainers = await db.users.find(query, {"_id": 0, "hashed_password": 0}).to_list(100)
+    
+    stats = []
+    for trainer in trainers:
+        # Get all assignments for this trainer
+        assignments = await db.student_batch_assignments.find(
+            {"trainer_id": trainer['id']},
+            {"_id": 0, "enrollment_id": 1, "batch_id": 1}
+        ).to_list(1000)
+        
+        unique_students = set(a['enrollment_id'] for a in assignments)
+        unique_batches = set(a['batch_id'] for a in assignments)
+        
+        # Get batch details
+        batches = await db.batches.find(
+            {"trainer_id": trainer['id']},
+            {"_id": 0, "name": 1, "program_name": 1, "status": 1}
+        ).to_list(100)
+        
+        stats.append({
+            "trainer_id": trainer['id'],
+            "trainer_name": trainer['name'],
+            "email": trainer.get('email'),
+            "unique_student_count": len(unique_students),
+            "total_batches": len(unique_batches),
+            "active_batches": len([b for b in batches if b.get('status') == 'Active']),
+            "batches": batches
+        })
+    
+    return stats
+
+# ========== PAYMENT PLAN EDIT (Branch Admin) ==========
+@api_router.put("/payment-plans/{plan_id}/edit")
+async def edit_payment_plan(plan_id: str, edit_data: PaymentPlanEdit, current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))):
+    """Edit or recreate a payment plan - Branch Admin only for critical cases"""
+    existing_plan = await db.payment_plans.find_one({"id": plan_id}, {"_id": 0})
+    if not existing_plan:
+        raise HTTPException(status_code=404, detail="Payment plan not found")
+    
+    enrollment_id = existing_plan.get('enrollment_id')
+    
+    # If installments are provided, recreate the schedule
+    if edit_data.installments:
+        # Delete old installments
+        await db.installment_schedule.delete_many({"payment_plan_id": plan_id})
+        
+        # Create new installments
+        for idx, inst in enumerate(edit_data.installments, 1):
+            new_inst = {
+                "id": str(uuid.uuid4()),
+                "payment_plan_id": plan_id,
+                "enrollment_id": enrollment_id,
+                "installment_number": idx,
+                "amount": inst.get('amount'),
+                "due_date": inst.get('due_date'),
+                "status": "Pending"
+            }
+            await db.installment_schedule.insert_one(new_inst)
+        
+        # Update plan
+        update_data = {
+            "total_installments": len(edit_data.installments),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_by": current_user.id
+        }
+        if edit_data.plan_type:
+            update_data['plan_type'] = edit_data.plan_type
+        
+        await db.payment_plans.update_one({"id": plan_id}, {"$set": update_data})
+        
+        logger.info(f"Payment plan {plan_id} recreated by {current_user.email} with {len(edit_data.installments)} installments")
+    
+    return {"message": "Payment plan updated successfully"}
+
+@api_router.delete("/payment-plans/{plan_id}")
+async def delete_payment_plan(plan_id: str, current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))):
+    """Delete a payment plan and its installments - for recreation"""
+    existing_plan = await db.payment_plans.find_one({"id": plan_id}, {"_id": 0})
+    if not existing_plan:
+        raise HTTPException(status_code=404, detail="Payment plan not found")
+    
+    # Delete installments
+    await db.installment_schedule.delete_many({"payment_plan_id": plan_id})
+    
+    # Delete plan
+    await db.payment_plans.delete_one({"id": plan_id})
+    
+    logger.info(f"Payment plan {plan_id} deleted by {current_user.email}")
+    return {"message": "Payment plan deleted successfully. You can now create a new plan."}
+
 # Task Management Endpoints
 @api_router.post("/tasks")
 async def create_task(task: TaskCreate, current_user: User = Depends(get_current_user)):
