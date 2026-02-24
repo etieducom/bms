@@ -84,8 +84,8 @@ const Layout = ({ children }) => {
     { icon: UsersRound, label: 'Batches', path: '/batches', show: isBranchAdmin || isSuperAdmin || isFDE || isCounsellor },
     // Certificates - For Super Admin
     { icon: Award, label: 'Certificates', path: '/certificates', show: isSuperAdmin },
-    // Admin Panel - ONLY for Super Admin
-    { icon: Settings, label: 'Admin Panel', path: '/admin', show: isSuperAdmin },
+    // Admin Panel - For Super Admin and Branch Admin (Branch Admin only sees limited tabs)
+    { icon: Settings, label: 'Admin Panel', path: '/admin', show: isSuperAdmin || isBranchAdmin },
     // Certificate Manager sees only these two tabs
     { icon: FileText, label: 'Certificate Requests', path: '/certificates', show: isCertManager },
     { icon: Award, label: 'Ready Certificates', path: '/certificates?status=Ready', show: isCertManager },
