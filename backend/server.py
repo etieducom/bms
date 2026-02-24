@@ -2462,11 +2462,19 @@ async def create_payment(payment: PaymentCreate, current_user: User = Depends(ge
         }}
     )
     
-    # Send WhatsApp notification for payment received
+    # Send WhatsApp notification for payment received with full details
+    pending_fee = final_fee - new_total_paid
     await send_whatsapp_notification(
         enrollment.get('phone', ''),
         "payment_received",
-        {"name": enrollment.get('student_name', ''), "amount": new_payment.amount}
+        {
+            "name": enrollment.get('student_name', ''),
+            "amount": str(payment.amount),
+            "total_fee": str(final_fee),
+            "paid_fee": str(new_total_paid),
+            "pending_fee": str(pending_fee),
+            "receipt_number": new_payment.receipt_number
+        }
     )
     
     return new_payment
