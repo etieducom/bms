@@ -478,19 +478,21 @@ const AdminPanel = () => {
         <p className="text-slate-600">Manage branches, programs, and users</p>
       </div>
 
-      <Tabs defaultValue="branches" className="w-full">
-        <TabsList className="grid w-full grid-cols-9">
-          <TabsTrigger value="branches">Branches</TabsTrigger>
-          <TabsTrigger value="programs">Programs</TabsTrigger>
+      <Tabs defaultValue={isBranchAdmin ? "users" : "branches"} className="w-full">
+        <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-9' : 'grid-cols-2'}`}>
+          {isSuperAdmin && <TabsTrigger value="branches">Branches</TabsTrigger>}
+          {isSuperAdmin && <TabsTrigger value="programs">Programs</TabsTrigger>}
           <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="expense-categories" data-testid="expense-categories-tab">Expenses</TabsTrigger>
-          <TabsTrigger value="lead-sources" data-testid="lead-sources-tab">Sources</TabsTrigger>
-          <TabsTrigger value="exams" data-testid="exams-tab">Exams</TabsTrigger>
-          <TabsTrigger value="whatsapp" data-testid="whatsapp-settings-tab">WhatsApp</TabsTrigger>
-          <TabsTrigger value="webhooks" data-testid="webhooks-tab">Webhooks</TabsTrigger>
-          <TabsTrigger value="system" data-testid="system-tab" className="text-red-600">System</TabsTrigger>
+          {isSuperAdmin && <TabsTrigger value="expense-categories" data-testid="expense-categories-tab">Expenses</TabsTrigger>}
+          {isSuperAdmin && <TabsTrigger value="lead-sources" data-testid="lead-sources-tab">Sources</TabsTrigger>}
+          {isSuperAdmin && <TabsTrigger value="exams" data-testid="exams-tab">Exams</TabsTrigger>}
+          {isSuperAdmin && <TabsTrigger value="whatsapp" data-testid="whatsapp-settings-tab">WhatsApp</TabsTrigger>}
+          {isSuperAdmin && <TabsTrigger value="webhooks" data-testid="webhooks-tab">Webhooks</TabsTrigger>}
+          {isSuperAdmin && <TabsTrigger value="system" data-testid="system-tab" className="text-red-600">System</TabsTrigger>}
+          {isBranchAdmin && <TabsTrigger value="batches-info">Batch Info</TabsTrigger>}
         </TabsList>
 
+        {isSuperAdmin && (
         <TabsContent value="branches" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-semibold">Branches</h2>
