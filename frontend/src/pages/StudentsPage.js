@@ -61,6 +61,7 @@ const StudentsPage = () => {
 
   useEffect(() => {
     fetchStudents();
+    fetchPrograms();
   }, []);
 
   const fetchStudents = async () => {
@@ -72,6 +73,57 @@ const StudentsPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchPrograms = async () => {
+    try {
+      const response = await adminAPI.getPrograms();
+      setPrograms(response.data);
+    } catch (error) {
+      console.error('Failed to fetch programs');
+    }
+  };
+
+  const openAddonDialog = async (student) => {
+    setSelectedStudent(student);
+    setAddonForm({ program_id: '', fee_quoted: '', discount_percent: 0 });
+    try {
+      const addons = await studentsAPI.getAddonCourses(student.id);
+      setAddonCourses(addons.data);
+    } catch (error) {
+      setAddonCourses([]);
+    }
+    setAddonDialog(true);
+  };
+
+  const handleAddAddonCourse = async () => {
+    if (!addonForm.program_id || !addonForm.fee_quoted) {
+      toast.error('Please select a program and enter fee');
+      return;
+    }
+    
+    setSavingAddon(true);
+    try {
+      const response = await studentsAPI.addAddonCourse(selectedStudent.id, {
+        enrollment_id: selectedStudent.id,
+        program_id: addonForm.program_id,
+        fee_quoted: parseFloat(addonForm.fee_quoted),
+        discount_percent: parseFloat(addonForm.discount_percent) || 0
+      });
+      toast.success(response.data.message);
+      setAddonDialog(false);
+      fetchStudents();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to add course');
+    } finally {
+      setSavingAddon(false);
+    }
+  };
+
+  const calculateAddonFinalFee = () => {
+    const quoted = parseFloat(addonForm.fee_quoted) || 0;
+    const discount = parseFloat(addonForm.discount_percent) || 0;
+    return quoted * (1 - discount / 100);
   };
 
   const viewDetails = async (student) => {
