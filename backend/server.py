@@ -428,7 +428,6 @@ class StudentBatchAssignment(BaseModel):
 
 class StudentBatchAssignmentCreate(BaseModel):
     enrollment_id: str
-    batch_id: str
 
 # Payment Plan Edit Model
 class PaymentPlanEdit(BaseModel):
