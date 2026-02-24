@@ -3115,7 +3115,8 @@ async def get_students(current_user: User = Depends(get_current_user)):
             **e,
             "total_paid": total_paid,
             "pending_amount": pending_amount,
-            "payment_plan_type": payment_plan.get('payment_type') if payment_plan else None,
+            "has_payment_plan": payment_plan is not None,
+            "payment_plan_type": payment_plan.get('plan_type') if payment_plan else None,
             "payments_count": len(payments)
         })
     
