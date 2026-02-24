@@ -80,6 +80,14 @@ const EnrollmentsPage = () => {
 
   // Enrollment payment status cache
   const [enrollmentPaymentStatus, setEnrollmentPaymentStatus] = useState({});
+  
+  // Edit Payment Plan dialog (for Branch Admin)
+  const [editPlanDialog, setEditPlanDialog] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(null);
+  const [editInstallments, setEditInstallments] = useState([]);
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isBranchAdmin = user.role === 'Branch Admin' || user.role === 'Admin';
 
   useEffect(() => {
     fetchData();
