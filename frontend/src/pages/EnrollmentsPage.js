@@ -805,14 +805,9 @@ const EnrollmentsPage = () => {
                                   <FileText className="w-4 h-4 mr-1" /> Plan
                                 </Button>
                               )}
-                              <Button 
-                                size="sm" 
-                                className="bg-slate-900 hover:bg-slate-800"
-                                onClick={() => openRecordPaymentDialog(enrollment)}
-                                data-testid={`record-payment-btn-${enrollment.id}`}
-                              >
-                                <CreditCard className="w-4 h-4 mr-1" /> Pay
-                              </Button>
+                              {status.hasPlan && (
+                                <Badge className="bg-green-100 text-green-700">Plan Created</Badge>
+                              )}
                               <Button 
                                 size="sm" 
                                 variant="ghost"
