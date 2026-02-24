@@ -616,6 +616,13 @@ class WhatsAppSettings(BaseModel):
             "variables": ["name", "enrollment_number", "course"],
             "description": "Thank you message when enrollment is confirmed"
         },
+        "payment_received": {
+            "enabled": True,
+            "template_name": "",
+            "namespace": "",
+            "variables": ["name", "amount", "total_fee", "paid_fee", "pending_fee", "receipt_number"],
+            "description": "Fee payment confirmation with details"
+        },
         "fee_reminder": {
             "enabled": True,
             "template_name": "",
