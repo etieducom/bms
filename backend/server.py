@@ -3166,6 +3166,184 @@ async def update_enrollment_status(enrollment_id: str, status: str, reason: str 
     
     return {"message": f"Enrollment status updated to {status}"}
 
+# Add-on Course Endpoints
+@api_router.post("/enrollments/{enrollment_id}/add-on-course")
+async def add_addon_course(enrollment_id: str, addon: AddOnCourseCreate, current_user: User = Depends(get_current_user)):
+    """Add an additional course to an existing enrollment"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_ADMIN, UserRole.FRONT_DESK]:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    # Get enrollment
+    enrollment = await db.enrollments.find_one({"id": enrollment_id}, {"_id": 0})
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+    
+    # Get program details
+    program = await db.programs.find_one({"id": addon.program_id}, {"_id": 0})
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+    
+    # Calculate final fee with discount
+    discount = addon.discount_percent or 0
+    final_fee = addon.fee_quoted * (1 - discount / 100)
+    
+    # Create add-on course record
+    new_addon = AddOnCourse(
+        enrollment_id=enrollment_id,
+        program_id=addon.program_id,
+        program_name=program['name'],
+        fee_quoted=addon.fee_quoted,
+        discount_percent=discount,
+        final_fee=final_fee,
+        added_by=current_user.id
+    )
+    
+    addon_dict = new_addon.model_dump()
+    addon_dict['added_at'] = addon_dict['added_at'].isoformat()
+    
+    await db.addon_courses.insert_one(addon_dict)
+    
+    # Update enrollment's final_fee
+    current_final_fee = enrollment.get('final_fee', 0)
+    new_total_fee = current_final_fee + final_fee
+    
+    await db.enrollments.update_one(
+        {"id": enrollment_id},
+        {"$set": {"final_fee": new_total_fee}}
+    )
+    
+    return {
+        "message": f"Add-on course '{program['name']}' added successfully",
+        "addon_fee": final_fee,
+        "new_total_fee": new_total_fee
+    }
+
+@api_router.get("/enrollments/{enrollment_id}/add-on-courses")
+async def get_addon_courses(enrollment_id: str, current_user: User = Depends(get_current_user)):
+    """Get all add-on courses for an enrollment"""
+    addons = await db.addon_courses.find(
+        {"enrollment_id": enrollment_id},
+        {"_id": 0}
+    ).to_list(100)
+    return addons
+
+# Schools/Colleges Outreach Management
+@api_router.post("/organizations")
+async def create_organization(org: OrganizationCreate, current_user: User = Depends(get_current_user)):
+    """Create a new school/college organization"""
+    new_org = Organization(
+        organization_type=OrganizationType(org.organization_type),
+        name=org.name,
+        city=org.city,
+        address=org.address,
+        contact_person_name=org.contact_person_name,
+        contact_number=org.contact_number,
+        email=org.email,
+        alternate_number=org.alternate_number,
+        alternate_email=org.alternate_email,
+        notes=org.notes,
+        created_by=current_user.id,
+        branch_id=current_user.branch_id
+    )
+    
+    org_dict = new_org.model_dump()
+    org_dict['created_at'] = org_dict['created_at'].isoformat()
+    org_dict['organization_type'] = org_dict['organization_type'].value
+    
+    await db.organizations.insert_one(org_dict)
+    
+    return {"message": "Organization created successfully", "id": new_org.id}
+
+@api_router.get("/organizations")
+async def get_organizations(current_user: User = Depends(get_current_user)):
+    """Get all organizations"""
+    organizations = await db.organizations.find({}, {"_id": 0}).to_list(1000)
+    
+    # Get follow-up counts for each organization
+    for org in organizations:
+        followups = await db.organization_followups.find(
+            {"organization_id": org['id']},
+            {"_id": 0}
+        ).to_list(100)
+        org['followup_count'] = len(followups)
+        org['last_followup'] = followups[-1] if followups else None
+    
+    return organizations
+
+@api_router.get("/organizations/{org_id}")
+async def get_organization(org_id: str, current_user: User = Depends(get_current_user)):
+    """Get a single organization with its follow-ups"""
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    followups = await db.organization_followups.find(
+        {"organization_id": org_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    org['followups'] = followups
+    return org
+
+@api_router.put("/organizations/{org_id}")
+async def update_organization(org_id: str, org: OrganizationUpdate, current_user: User = Depends(get_current_user)):
+    """Update an organization"""
+    existing = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    update_data = {k: v for k, v in org.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.organizations.update_one({"id": org_id}, {"$set": update_data})
+    
+    return {"message": "Organization updated successfully"}
+
+@api_router.delete("/organizations/{org_id}")
+async def delete_organization(org_id: str, current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))):
+    """Delete an organization"""
+    result = await db.organizations.delete_one({"id": org_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Also delete related follow-ups
+    await db.organization_followups.delete_many({"organization_id": org_id})
+    
+    return {"message": "Organization deleted successfully"}
+
+@api_router.post("/organizations/{org_id}/followups")
+async def create_organization_followup(org_id: str, followup: OrganizationFollowUpCreate, current_user: User = Depends(get_current_user)):
+    """Add a follow-up to an organization"""
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    new_followup = OrganizationFollowUp(
+        organization_id=org_id,
+        follow_up_date=followup.follow_up_date,
+        follow_up_time=followup.follow_up_time,
+        notes=followup.notes,
+        outcome=followup.outcome,
+        created_by=current_user.id,
+        created_by_name=current_user.name
+    )
+    
+    followup_dict = new_followup.model_dump()
+    followup_dict['created_at'] = followup_dict['created_at'].isoformat()
+    
+    await db.organization_followups.insert_one(followup_dict)
+    
+    return {"message": "Follow-up added successfully", "id": new_followup.id}
+
+@api_router.get("/organizations/{org_id}/followups")
+async def get_organization_followups(org_id: str, current_user: User = Depends(get_current_user)):
+    """Get all follow-ups for an organization"""
+    followups = await db.organization_followups.find(
+        {"organization_id": org_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return followups
+
 # Task Management Endpoints
 @api_router.post("/tasks")
 async def create_task(task: TaskCreate, current_user: User = Depends(get_current_user)):
