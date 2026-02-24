@@ -676,8 +676,8 @@ const StudentsPage = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        {/* Pay Fee Button */}
-                        {canPay && (student.total_paid || 0) < (student.final_fee || 0) && student.status === 'Active' && (
+                        {/* Pay Fee Button - Only show if payment plan exists */}
+                        {canPay && student.has_payment_plan && (student.total_paid || 0) < (student.final_fee || 0) && student.status === 'Active' && (
                           <Button
                             variant="default"
                             size="sm"
@@ -688,6 +688,12 @@ const StudentsPage = () => {
                             <Wallet className="w-4 h-4 mr-1" />
                             Pay Fee
                           </Button>
+                        )}
+                        {/* No Plan Badge */}
+                        {!student.has_payment_plan && (student.total_paid || 0) < (student.final_fee || 0) && (
+                          <Badge variant="outline" className="text-orange-600 border-orange-300">
+                            No Plan
+                          </Badge>
                         )}
                         {/* View Details Button */}
                         <Button
