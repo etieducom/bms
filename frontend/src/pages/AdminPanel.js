@@ -566,7 +566,9 @@ const AdminPanel = () => {
             ))}
           </div>
         </TabsContent>
+        )}
 
+        {isSuperAdmin && (
         <TabsContent value="programs" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-semibold">Programs</h2>
