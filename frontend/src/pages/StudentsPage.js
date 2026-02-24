@@ -1140,6 +1140,109 @@ const StudentsPage = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add-on Course Dialog */}
+      <Dialog open={addonDialog} onOpenChange={setAddonDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookPlus className="w-5 h-5 text-purple-600" />
+              Add Course
+            </DialogTitle>
+          </DialogHeader>
+          {selectedStudent && (
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-600">Student: <strong>{selectedStudent.student_name}</strong></p>
+                <p className="text-sm text-slate-600">Current Program: <strong>{selectedStudent.program_name}</strong></p>
+                <p className="text-sm text-slate-600">Current Fee: <strong>₹{selectedStudent.final_fee?.toLocaleString()}</strong></p>
+              </div>
+
+              {addonCourses.length > 0 && (
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <p className="text-sm font-medium text-purple-700 mb-2">Added Courses:</p>
+                  {addonCourses.map((addon) => (
+                    <div key={addon.id} className="flex justify-between text-sm">
+                      <span>{addon.program_name}</span>
+                      <span className="font-medium">₹{addon.final_fee?.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div>
+                <Label>Select New Course *</Label>
+                <Select 
+                  value={addonForm.program_id} 
+                  onValueChange={(v) => {
+                    const program = programs.find(p => p.id === v);
+                    setAddonForm({
+                      ...addonForm, 
+                      program_id: v,
+                      fee_quoted: program?.fee || ''
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a program" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {programs
+                      .filter(p => p.id !== selectedStudent.program_id)
+                      .map((program) => (
+                        <SelectItem key={program.id} value={program.id}>
+                          {program.name} (₹{program.fee?.toLocaleString()})
+                        </SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Fee Quoted (₹) *</Label>
+                  <Input
+                    type="number"
+                    value={addonForm.fee_quoted}
+                    onChange={(e) => setAddonForm({...addonForm, fee_quoted: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Discount %</Label>
+                  <Input
+                    type="number"
+                    value={addonForm.discount_percent}
+                    onChange={(e) => setAddonForm({...addonForm, discount_percent: e.target.value})}
+                    min="0"
+                    max="100"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-green-50 rounded-lg">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Add-on Course Fee:</span>
+                  <span className="font-medium">₹{calculateAddonFinalFee().toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm mt-1">
+                  <span className="text-slate-600">New Total Fee:</span>
+                  <span className="font-bold text-green-600">
+                    ₹{(selectedStudent.final_fee + calculateAddonFinalFee()).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setAddonDialog(false)}>Cancel</Button>
+                <Button onClick={handleAddAddonCourse} disabled={savingAddon}>
+                  {savingAddon ? 'Adding...' : 'Add Course'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
