@@ -154,6 +154,18 @@ export const studentsAPI = {
   getDetails: (id) => api.get(`/students/${id}`),
   cancelEnrollment: (id, reason) => api.put(`/students/${id}/cancel`, null, { params: { reason } }),
   updateStatus: (id, status, reason) => api.put(`/students/${id}/status`, null, { params: { status, reason } }),
+  addAddonCourse: (enrollmentId, data) => api.post(`/enrollments/${enrollmentId}/add-on-course`, data),
+  getAddonCourses: (enrollmentId) => api.get(`/enrollments/${enrollmentId}/add-on-courses`),
+};
+
+export const organizationsAPI = {
+  getAll: () => api.get('/organizations'),
+  getOne: (id) => api.get(`/organizations/${id}`),
+  create: (data) => api.post('/organizations', data),
+  update: (id, data) => api.put(`/organizations/${id}`, data),
+  delete: (id) => api.delete(`/organizations/${id}`),
+  addFollowUp: (orgId, data) => api.post(`/organizations/${orgId}/followups`, data),
+  getFollowUps: (orgId) => api.get(`/organizations/${orgId}/followups`),
 };
 
 export const notificationsAPI = {
