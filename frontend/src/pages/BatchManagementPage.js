@@ -202,7 +202,7 @@ const BatchManagementPage = () => {
           <h1 className="text-4xl font-bold tracking-tight mb-2">Batch Management</h1>
           <p className="text-slate-600">Manage batches and assign students to trainers</p>
         </div>
-        {isBranchAdmin && (
+        {canEdit && (
           <Button onClick={openCreateBatch} data-testid="create-batch-btn">
             <Plus className="w-4 h-4 mr-2" />
             Create Batch
