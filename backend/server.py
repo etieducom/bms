@@ -2410,6 +2410,37 @@ async def create_payment(payment: PaymentCreate, current_user: User = Depends(ge
                         )
                     
                     logger.info(f"Redistributed shortfall of ₹{shortfall} (₹{shortfall_per_installment} each) to {len(remaining_installments)} remaining installments")
+                else:
+                    # This is the LAST installment and partial payment - create a new installment
+                    # Get total number of installments
+                    all_installments = await db.installment_schedule.find(
+                        {"payment_plan_id": payment.payment_plan_id},
+                        {"_id": 0}
+                    ).to_list(100)
+                    new_installment_number = len(all_installments) + 1
+                    
+                    # Calculate due date (30 days from now)
+                    new_due_date = (datetime.now(timezone.utc) + timedelta(days=30)).strftime("%Y-%m-%d")
+                    
+                    # Create new installment for remaining amount
+                    new_installment = {
+                        "id": str(uuid.uuid4()),
+                        "payment_plan_id": payment.payment_plan_id,
+                        "enrollment_id": payment.enrollment_id,
+                        "installment_number": new_installment_number,
+                        "amount": shortfall,
+                        "due_date": new_due_date,
+                        "status": "Pending"
+                    }
+                    await db.installment_schedule.insert_one(new_installment)
+                    
+                    # Update payment plan total installments
+                    await db.payment_plans.update_one(
+                        {"id": payment.payment_plan_id},
+                        {"$set": {"total_installments": new_installment_number}}
+                    )
+                    
+                    logger.info(f"Created new installment #{new_installment_number} for ₹{shortfall} due on {new_due_date}")
             
             # Mark current installment as Paid
             await db.installment_schedule.update_one(
