@@ -890,7 +890,19 @@ const EnrollmentsPage = () => {
                                 </Button>
                               )}
                               {status.hasPlan && (
-                                <Badge className="bg-green-100 text-green-700">Plan Created</Badge>
+                                <>
+                                  <Badge className="bg-green-100 text-green-700">Plan Created</Badge>
+                                  {isBranchAdmin && (
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost"
+                                      onClick={() => openEditPlanDialog(enrollment)}
+                                      title="Edit Plan"
+                                    >
+                                      <Edit className="w-4 h-4 text-orange-500" />
+                                    </Button>
+                                  )}
+                                </>
                               )}
                               <Button 
                                 size="sm" 
