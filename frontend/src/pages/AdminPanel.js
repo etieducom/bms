@@ -637,12 +637,13 @@ const AdminPanel = () => {
             ))}
           </div>
         </TabsContent>
+        )}
 
         <TabsContent value="users" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold">Users</h2>
+            <h2 className="text-2xl font-semibold">{isBranchAdmin ? 'Trainers' : 'Users'}</h2>
             <Button onClick={() => setUserDialog(true)} className="bg-slate-900 hover:bg-slate-800">
-              <Plus className="w-4 h-4 mr-2" /> Add User
+              <Plus className="w-4 h-4 mr-2" /> Add {isBranchAdmin ? 'Trainer' : 'User'}
             </Button>
           </div>
           
