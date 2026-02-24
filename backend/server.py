@@ -292,6 +292,91 @@ class QuizAttemptCreate(BaseModel):
 class QuizAttemptSubmit(BaseModel):
     answers: dict  # {question_number: "A" or "B" or "C" or "D"}
 
+# Add-on Course for existing enrollments
+class AddOnCourse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    enrollment_id: str
+    program_id: str
+    program_name: str
+    fee_quoted: float
+    discount_percent: Optional[float] = 0
+    final_fee: float
+    added_by: str
+    added_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class AddOnCourseCreate(BaseModel):
+    enrollment_id: str
+    program_id: str
+    fee_quoted: float
+    discount_percent: Optional[float] = 0
+
+# Schools/Colleges Outreach Management
+class OrganizationType(str, Enum):
+    SCHOOL = "School"
+    COLLEGE = "College"
+
+class Organization(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_type: OrganizationType
+    name: str
+    city: str
+    address: Optional[str] = None
+    contact_person_name: str
+    contact_number: str
+    email: Optional[str] = None
+    alternate_number: Optional[str] = None
+    alternate_email: Optional[str] = None
+    notes: Optional[str] = None
+    created_by: str
+    branch_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = None
+
+class OrganizationCreate(BaseModel):
+    organization_type: str
+    name: str
+    city: str
+    address: Optional[str] = None
+    contact_person_name: str
+    contact_number: str
+    email: Optional[str] = None
+    alternate_number: Optional[str] = None
+    alternate_email: Optional[str] = None
+    notes: Optional[str] = None
+
+class OrganizationUpdate(BaseModel):
+    organization_type: Optional[str] = None
+    name: Optional[str] = None
+    city: Optional[str] = None
+    address: Optional[str] = None
+    contact_person_name: Optional[str] = None
+    contact_number: Optional[str] = None
+    email: Optional[str] = None
+    alternate_number: Optional[str] = None
+    alternate_email: Optional[str] = None
+    notes: Optional[str] = None
+
+class OrganizationFollowUp(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_id: str
+    follow_up_date: str
+    follow_up_time: Optional[str] = None
+    notes: str
+    outcome: Optional[str] = None  # Interested, Not Interested, Call Back, Meeting Scheduled
+    created_by: str
+    created_by_name: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class OrganizationFollowUpCreate(BaseModel):
+    organization_id: str
+    follow_up_date: str
+    follow_up_time: Optional[str] = None
+    notes: str
+    outcome: Optional[str] = None
+
 class Token(BaseModel):
     access_token: str
     token_type: str
