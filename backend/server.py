@@ -46,6 +46,7 @@ class UserRole(str, Enum):
     COUNSELLOR = "Counsellor"
     FRONT_DESK = "Front Desk Executive"
     CERTIFICATE_MANAGER = "Certificate Manager"  # Manages certificate requests
+    TRAINER = "Trainer"  # Trainer for batch management
 
 class LeadStatus(str, Enum):
     NEW = "New"
