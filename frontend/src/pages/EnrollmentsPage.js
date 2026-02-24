@@ -265,6 +265,82 @@ const EnrollmentsPage = () => {
     }
   };
 
+  // Open Edit Payment Plan Dialog (Branch Admin only)
+  const openEditPlanDialog = async (enrollment) => {
+    try {
+      const planRes = await enrollmentAPI.getPaymentPlan(enrollment.id);
+      setEditingPlan({
+        enrollment,
+        plan: planRes.data.payment_plan,
+        planId: planRes.data.payment_plan?.id
+      });
+      
+      // Prepare installments for editing
+      if (planRes.data.installments?.length > 0) {
+        setEditInstallments(planRes.data.installments.map(inst => ({
+          amount: inst.amount,
+          due_date: inst.due_date,
+          status: inst.status
+        })));
+      } else {
+        setEditInstallments([{ amount: '', due_date: '', status: 'Pending' }]);
+      }
+      
+      setEditPlanDialog(true);
+    } catch (error) {
+      toast.error('Failed to load payment plan');
+    }
+  };
+
+  const handleSaveEditedPlan = async () => {
+    if (!editingPlan?.planId) {
+      toast.error('No payment plan found');
+      return;
+    }
+    
+    // Validate installments
+    const validInstallments = editInstallments.filter(i => i.amount && i.due_date);
+    if (validInstallments.length === 0) {
+      toast.error('Please add at least one installment');
+      return;
+    }
+    
+    try {
+      await paymentPlanAPI.edit(editingPlan.planId, {
+        installments: validInstallments.map(i => ({
+          amount: parseFloat(i.amount),
+          due_date: i.due_date
+        }))
+      });
+      toast.success('Payment plan updated successfully');
+      setEditPlanDialog(false);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update plan');
+    }
+  };
+
+  const handleDeletePlan = async () => {
+    if (!window.confirm('Delete this payment plan? You can create a new one after deletion.')) return;
+    
+    try {
+      await paymentPlanAPI.delete(editingPlan.planId);
+      toast.success('Payment plan deleted. You can now create a new plan.');
+      setEditPlanDialog(false);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete plan');
+    }
+  };
+
+  const addEditInstallment = () => {
+    setEditInstallments([...editInstallments, { amount: '', due_date: '', status: 'Pending' }]);
+  };
+
+  const removeEditInstallment = (index) => {
+    setEditInstallments(editInstallments.filter((_, i) => i !== index));
+  };
+
   const handlePrintReceipt = () => {
     const printWindow = window.open('', '', 'height=900,width=800');
     const logoUrl = 'https://etieducom.com/wp-content/uploads/2024/03/eti-educom-logo.png';
