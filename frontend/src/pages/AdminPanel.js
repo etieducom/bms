@@ -1498,6 +1498,8 @@ const AdminPanel = () => {
               </div>
             </div>
 
+            {/* Branch selection - Only for Super Admin, Branch Admin's branch is auto-assigned */}
+            {isSuperAdmin && (
             <div className="space-y-2">
               <Label>Branch {userForm.role !== 'Admin' && '*'}</Label>
               <Select value={userForm.branch_id} onValueChange={(value) => setUserForm({ ...userForm, branch_id: value })}>
@@ -1511,6 +1513,19 @@ const AdminPanel = () => {
                 </SelectContent>
               </Select>
             </div>
+            )}
+
+            {isBranchAdmin && (
+            <div className="space-y-2">
+              <Label>Branch</Label>
+              <Input
+                value={branches.find(b => b.id === currentUser.branch_id)?.name || 'Your Branch'}
+                disabled
+                className="bg-slate-100"
+              />
+              <p className="text-xs text-slate-500">Trainers are automatically assigned to your branch</p>
+            </div>
+            )}
 
             <div className="space-y-2">
               <Label>Photo URL (Optional)</Label>
