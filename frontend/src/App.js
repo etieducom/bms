@@ -171,7 +171,7 @@ function App() {
           <Route
             path="/admin"
             element={
-              <PrivateRoute adminOnly>
+              <PrivateRoute adminPanelAccess>
                 <Layout><AdminPanel /></Layout>
               </PrivateRoute>
             }
