@@ -1474,12 +1474,34 @@ async def change_own_password(password_data: PasswordChange, current_user: User 
 
 # Admin - User Management
 @api_router.post("/admin/users", response_model=UserResponse)
-async def create_user(user: UserCreate, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+async def create_user(user: UserCreate, current_user: User = Depends(get_current_user)):
+    """Create a new user - Super Admin can create all roles, Branch Admin can only create Trainers"""
+    if current_user.role == UserRole.ADMIN:
+        # Super Admin can create any role
+        pass
+    elif current_user.role == UserRole.BRANCH_ADMIN:
+        # Branch Admin can only create Trainer role
+        if user.role != UserRole.TRAINER.value:
+            raise HTTPException(status_code=403, detail="Branch Admin can only create Trainer users")
+        # Set branch_id to Branch Admin's branch
+        user.branch_id = current_user.branch_id
+    else:
+        raise HTTPException(status_code=403, detail="Only Admin or Branch Admin can create users")
+    
     return await register(user)
 
 @api_router.get("/admin/users", response_model=List[UserResponse])
-async def get_users(current_user: User = Depends(require_role([UserRole.ADMIN]))):
-    users = await db.users.find({}, {"_id": 0, "hashed_password": 0}).to_list(1000)
+async def get_users(current_user: User = Depends(get_current_user)):
+    """Get users - Super Admin sees all, Branch Admin sees their branch users"""
+    if current_user.role == UserRole.ADMIN:
+        users = await db.users.find({}, {"_id": 0, "hashed_password": 0}).to_list(1000)
+    elif current_user.role == UserRole.BRANCH_ADMIN:
+        users = await db.users.find(
+            {"branch_id": current_user.branch_id}, 
+            {"_id": 0, "hashed_password": 0}
+        ).to_list(1000)
+    else:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
     return [UserResponse(**u) for u in users]
 
 @api_router.get("/branch/users", response_model=List[UserResponse])
