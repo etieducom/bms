@@ -140,6 +140,7 @@ const AdminPanel = () => {
       enquiry_saved: { enabled: true, template_name: '', namespace: '', variables: ['name', 'course'], description: 'When a new enquiry/lead is saved' },
       demo_booked: { enabled: true, template_name: '', namespace: '', variables: ['name', 'demo_date', 'demo_time', 'trainer'], description: 'When demo is scheduled' },
       enrollment_confirmed: { enabled: true, template_name: '', namespace: '', variables: ['name', 'enrollment_number', 'course'], description: 'Thank you message on enrollment' },
+      payment_received: { enabled: true, template_name: '', namespace: '', variables: ['name', 'amount', 'total_fee', 'paid_fee', 'pending_fee', 'receipt_number'], description: 'Fee payment confirmation with details' },
       fee_reminder: { enabled: true, template_name: '', namespace: '', variables: ['name', 'amount_due', 'due_date'], description: 'Pending fee reminders' },
       birthday_wishes: { enabled: true, template_name: '', namespace: '', variables: ['name'], description: 'Birthday wishes on DOB' }
     }
