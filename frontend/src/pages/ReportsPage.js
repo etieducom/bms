@@ -100,14 +100,6 @@ const ReportsPage = () => {
     });
   };
 
-  const reportTypes = [
-    { id: 'leads', label: 'Leads Report', icon: Users, description: 'All leads with status and details' },
-    { id: 'enrollments', label: 'Enrollments Report', icon: FileText, description: 'Student enrollments and program details' },
-    { id: 'income', label: 'Income Report', icon: DollarSign, description: 'Payment records and revenue' },
-    { id: 'expenses', label: 'Expenses Report', icon: CreditCard, description: 'Expense records by category' },
-    { id: 'pending_payments', label: 'Pending Payments', icon: Clock, description: 'Outstanding installments' },
-  ];
-
   return (
     <div className="space-y-6" data-testid="reports-page">
       <div>
