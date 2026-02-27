@@ -306,7 +306,8 @@ const CashHandlingPage = () => {
                 <thead>
                   <tr className="border-b bg-slate-50">
                     <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Date</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Total Cash</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Deposited</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Current Total</th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Status</th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Remarks</th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Receipt</th>
@@ -320,6 +321,9 @@ const CashHandlingPage = () => {
                       </td>
                       <td className="px-4 py-3 font-medium text-green-600">
                         ₹{(record.total_cash || 0).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-blue-600">
+                        ₹{(record.current_total || record.total_cash || 0).toLocaleString()}
                       </td>
                       <td className="px-4 py-3">
                         {record.status === 'Deposited' ? (
