@@ -984,6 +984,8 @@ class Payment(BaseModel):
     installment_number: Optional[int] = None
     remarks: Optional[str] = None
     receipt_number: str = Field(default_factory=lambda: f"RCP-{str(uuid.uuid4())[:8].upper()}")
+    student_name: Optional[str] = None  # For reports
+    program_name: Optional[str] = None  # For reports
     created_by: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
