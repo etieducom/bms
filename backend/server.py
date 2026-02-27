@@ -1369,6 +1369,28 @@ async def register(user: UserCreate):
     user_dict['created_at'] = user_dict['created_at'].isoformat()
     
     await db.users.insert_one(user_dict)
+    
+    # Auto-create fixed batches for Trainer role
+    if user.role == UserRole.TRAINER.value and user.branch_id:
+        for slot in FIXED_BATCH_TIMINGS:
+            batch = {
+                "id": str(uuid.uuid4()),
+                "name": f"{new_user.name} - {slot['name']} ({slot['timing']})",
+                "program_id": None,  # Will be assigned later
+                "program_name": None,
+                "trainer_id": new_user.id,
+                "trainer_name": new_user.name,
+                "branch_id": user.branch_id,
+                "timing": slot['timing'],
+                "slot_number": slot['slot'],
+                "max_students": 30,
+                "status": "Active",
+                "created_by": "system",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.batches.insert_one(batch)
+        logger.info(f"Auto-created {len(FIXED_BATCH_TIMINGS)} fixed batches for trainer: {new_user.name}")
+    
     return UserResponse(**{k: v for k, v in new_user.model_dump().items() if k != 'hashed_password'})
 
 @api_router.post("/auth/login", response_model=Token)
