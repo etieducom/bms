@@ -4323,6 +4323,205 @@ async def get_trainer_batches(current_user: User = Depends(get_current_user)):
     
     return batches
 
+
+# ========== STUDENT FEEDBACK SYSTEM ==========
+
+@api_router.get("/feedback/list")
+async def get_feedback_list(month: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    """Get list of students for feedback collection - Counsellor only"""
+    if current_user.role not in [UserRole.COUNSELLOR, UserRole.BRANCH_ADMIN, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Default to current month
+    if not month:
+        month = datetime.now(timezone.utc).strftime('%Y-%m')
+    
+    branch_filter = {}
+    if current_user.role in [UserRole.COUNSELLOR, UserRole.BRANCH_ADMIN]:
+        branch_filter["branch_id"] = current_user.branch_id
+    
+    # Get or create feedback list for the month
+    feedback_list = await db.feedback_lists.find_one(
+        {"month": month, **branch_filter},
+        {"_id": 0}
+    )
+    
+    if not feedback_list:
+        # Generate list from active students
+        students = await db.enrollments.find(
+            {"status": {"$nin": ["Cancelled", "Completed"]}, **branch_filter},
+            {"_id": 0, "id": 1, "student_name": 1, "program_name": 1, "phone": 1, "student_phone": 1}
+        ).to_list(10000)
+        
+        student_list = []
+        for s in students:
+            # Check if feedback already given
+            existing_feedback = await db.student_feedbacks.find_one({
+                "enrollment_id": s['id'],
+                "month": month
+            }, {"_id": 0})
+            
+            student_list.append({
+                "enrollment_id": s['id'],
+                "student_name": s.get('student_name', ''),
+                "student_phone": s.get('phone') or s.get('student_phone', ''),
+                "program_name": s.get('program_name', ''),
+                "feedback_status": "Completed" if existing_feedback else "Pending"
+            })
+        
+        feedback_list = {
+            "id": str(uuid.uuid4()),
+            "month": month,
+            "branch_id": current_user.branch_id,
+            "students": student_list,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.feedback_lists.insert_one(feedback_list)
+    else:
+        # Update feedback status for each student
+        for student in feedback_list.get('students', []):
+            existing_feedback = await db.student_feedbacks.find_one({
+                "enrollment_id": student['enrollment_id'],
+                "month": month
+            }, {"_id": 0})
+            student['feedback_status'] = "Completed" if existing_feedback else "Pending"
+    
+    return feedback_list
+
+@api_router.post("/feedback")
+async def submit_feedback(feedback: StudentFeedbackCreate, current_user: User = Depends(require_role([UserRole.COUNSELLOR]))):
+    """Submit student feedback - Counsellor only"""
+    # Get enrollment details
+    enrollment = await db.enrollments.find_one({"id": feedback.enrollment_id}, {"_id": 0})
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Check branch access
+    if enrollment.get('branch_id') != current_user.branch_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    month = datetime.now(timezone.utc).strftime('%Y-%m')
+    
+    # Check if already submitted for this month
+    existing = await db.student_feedbacks.find_one({
+        "enrollment_id": feedback.enrollment_id,
+        "month": month
+    }, {"_id": 0})
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Feedback already submitted for this student this month")
+    
+    new_feedback = StudentFeedback(
+        **feedback.model_dump(),
+        student_name=enrollment.get('student_name', ''),
+        student_phone=enrollment.get('phone') or enrollment.get('student_phone', ''),
+        program_name=enrollment.get('program_name', ''),
+        branch_id=current_user.branch_id,
+        month=month,
+        collected_by=current_user.id
+    )
+    
+    await db.student_feedbacks.insert_one(new_feedback.model_dump())
+    return {"message": "Feedback submitted successfully", "id": new_feedback.id}
+
+@api_router.get("/feedback/summary")
+async def get_feedback_summary(month: Optional[str] = None, current_user: User = Depends(require_role([UserRole.BRANCH_ADMIN, UserRole.ADMIN]))):
+    """Get AI-analyzed feedback summary - Branch Admin only"""
+    if not month:
+        month = datetime.now(timezone.utc).strftime('%Y-%m')
+    
+    branch_filter = {}
+    if current_user.role == UserRole.BRANCH_ADMIN:
+        branch_filter["branch_id"] = current_user.branch_id
+    
+    # Get all feedbacks for the month
+    feedbacks = await db.student_feedbacks.find(
+        {"month": month, **branch_filter},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    if not feedbacks:
+        return {
+            "month": month,
+            "total_feedbacks": 0,
+            "summary": "No feedbacks collected for this month",
+            "ai_analysis": None,
+            "average_ratings": {},
+            "feedbacks": []
+        }
+    
+    # Calculate averages
+    total = len(feedbacks)
+    avg_doubt = sum(f.get('doubt_clearance', 0) for f in feedbacks) / total
+    avg_teacher = sum(f.get('teacher_behavior', 0) for f in feedbacks) / total
+    avg_facilities = sum(f.get('facilities', 0) for f in feedbacks) / total
+    avg_overall = sum(f.get('overall_rating', 0) for f in feedbacks) / total
+    
+    # Collect remarks for AI analysis
+    remarks_text = "\n".join([f.get('remarks', '') for f in feedbacks if f.get('remarks')])
+    
+    # Try AI analysis
+    ai_analysis = None
+    if LLM_AVAILABLE and os.environ.get('EMERGENT_LLM_KEY') and remarks_text:
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            
+            summary_data = f"""
+Student Feedback Summary for {month}:
+- Total Feedbacks: {total}
+- Average Doubt Clearance: {avg_doubt:.1f}/5
+- Average Teacher Behavior: {avg_teacher:.1f}/5
+- Average Facilities: {avg_facilities:.1f}/5
+- Average Overall: {avg_overall:.1f}/5
+
+Student Remarks:
+{remarks_text[:2000]}
+"""
+            
+            chat = LlmChat(
+                api_key=os.environ.get('EMERGENT_LLM_KEY'),
+                session_id=f"feedback-analysis-{month}",
+                system_message="""You are an education management analyst. Analyze the student feedback and provide:
+1. Key themes and patterns in the remarks
+2. Areas of improvement needed
+3. Positive highlights
+4. Specific actionable recommendations
+
+Keep the response concise and actionable (max 300 words)."""
+            ).with_model("openai", "gpt-4o")
+            
+            response = await chat.send_message(UserMessage(text=summary_data))
+            ai_analysis = response.strip()
+            
+        except Exception as e:
+            logging.error(f"AI feedback analysis error: {e}")
+    
+    return {
+        "month": month,
+        "total_feedbacks": total,
+        "average_ratings": {
+            "doubt_clearance": round(avg_doubt, 1),
+            "teacher_behavior": round(avg_teacher, 1),
+            "facilities": round(avg_facilities, 1),
+            "overall": round(avg_overall, 1)
+        },
+        "ai_analysis": ai_analysis,
+        "feedbacks": feedbacks
+    }
+
+@api_router.get("/feedback/months")
+async def get_feedback_months(current_user: User = Depends(require_role([UserRole.BRANCH_ADMIN, UserRole.ADMIN]))):
+    """Get list of months with feedback data"""
+    branch_filter = {}
+    if current_user.role == UserRole.BRANCH_ADMIN:
+        branch_filter["branch_id"] = current_user.branch_id
+    
+    feedbacks = await db.student_feedbacks.find(branch_filter, {"_id": 0, "month": 1}).to_list(10000)
+    months = sorted(list(set(f.get('month') for f in feedbacks)), reverse=True)
+    return months
+
+
+
 # ========== ATTENDANCE MANAGEMENT ==========
 @api_router.post("/attendance")
 async def mark_attendance(attendance: AttendanceCreate, current_user: User = Depends(get_current_user)):
