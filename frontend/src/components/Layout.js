@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, BarChart3, LogOut, Menu, X, Bell, FileText, Settings, Folder, CreditCard, Clock, Trash2, Wallet, FileSpreadsheet, GraduationCap, Globe, ClipboardList, CheckSquare, BookOpen, Award, Building2, UsersRound, Target } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart3, LogOut, Menu, X, Bell, FileText, Settings, Folder, CreditCard, Clock, Trash2, Wallet, FileSpreadsheet, GraduationCap, Globe, ClipboardList, CheckSquare, BookOpen, Award, Building2, UsersRound, Target, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -74,6 +74,8 @@ const Layout = ({ children }) => {
     // --- Additional items below the main navigation ---
     // Pending Follow-ups - For Counsellors and Branch Admins only
     { icon: Bell, label: 'Pending Follow-ups', path: '/followups', show: isCounsellor || isBranchAdmin },
+    // Student Feedback - For Counsellors and Branch Admins
+    { icon: MessageSquare, label: 'Student Feedback', path: '/student-feedback', show: isCounsellor || isBranchAdmin },
     // Expenses - For Branch Admin and FDE
     { icon: Wallet, label: 'Expenses', path: '/expenses', show: isBranchAdmin || isFDE },
     // Campaign Management - For Branch Admin only
