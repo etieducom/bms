@@ -510,6 +510,80 @@ const StudentsPage = () => {
     }
   };
 
+  // Edit Student functions
+  const openEditDialog = (student) => {
+    setEditForm({
+      student_name: student.student_name || '',
+      student_phone: student.phone || student.student_phone || '',
+      student_email: student.email || student.student_email || '',
+      date_of_birth: student.date_of_birth || '',
+      gender: student.gender || '',
+      address: student.address || '',
+      city: student.city || '',
+      state: student.state || '',
+      pincode: student.pincode || '',
+      parent_name: student.parent_name || '',
+      parent_phone: student.parent_phone || '',
+      highest_qualification: student.highest_qualification || '',
+      institution_name: student.institution_name || '',
+      passing_year: student.passing_year || '',
+      percentage: student.percentage || '',
+      student_photo_url: student.student_photo_url || '',
+    });
+    setSelectedStudent(student);
+    setEditDialog(true);
+  };
+
+  const handleEditFormChange = (field, value) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingPhoto(true);
+    try {
+      const response = await uploadAPI.uploadImage(file);
+      setEditForm(prev => ({ ...prev, student_photo_url: response.data.url }));
+      toast.success('Photo uploaded successfully');
+    } catch (error) {
+      toast.error('Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedStudent) return;
+    setSavingEdit(true);
+    
+    try {
+      // Only send changed fields
+      const updateData = {};
+      Object.entries(editForm).forEach(([key, value]) => {
+        if (value !== '' && value !== null && value !== undefined) {
+          updateData[key] = value;
+        }
+      });
+      
+      await studentsAPI.updateDetails(selectedStudent.id, updateData);
+      toast.success('Student details updated successfully');
+      setEditDialog(false);
+      fetchStudents();
+      
+      // Refresh details if viewing
+      if (detailsDialog) {
+        const detailsRes = await studentsAPI.getDetails(selectedStudent.id);
+        setStudentDetails(detailsRes.data);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update student details');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const filteredStudents = students.filter(s => {
     // Text search
     const matchesSearch = 
