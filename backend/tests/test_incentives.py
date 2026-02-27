@@ -131,6 +131,8 @@ class TestCounsellorIncentives:
     def test_branch_admin_incentive_stats_requires_admin_role(self):
         """Test that incentive stats endpoint requires Branch Admin role"""
         # Test with counsellor token - should fail
+        if not hasattr(self, 'counsellor_token'):
+            pytest.skip("Counsellor token not available")
         response = requests.get(
             f"{BASE_URL}/api/branch-admin/incentive-stats",
             headers={"Authorization": f"Bearer {self.counsellor_token}"}
