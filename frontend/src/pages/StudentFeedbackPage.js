@@ -64,15 +64,19 @@ const StudentFeedbackPage = () => {
   }, []);
 
   const fetchMonths = async () => {
+    setLoadingSummary(true);
     try {
       const response = await feedbackAPI.getMonths();
       setAvailableMonths(response.data);
       if (response.data.length > 0) {
         setSelectedMonth(response.data[0]);
-        fetchSummary(response.data[0]);
+        await fetchSummary(response.data[0]);
+      } else {
+        setLoadingSummary(false);
       }
     } catch (error) {
       console.error('Error fetching months:', error);
+      setLoadingSummary(false);
     } finally {
       setLoading(false);
     }
