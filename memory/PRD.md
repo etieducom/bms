@@ -2,122 +2,79 @@
 
 ## Original Problem Statement
 ETI Educom requires a comprehensive institute management system with:
-- Multi-role access control (Super Admin, Branch Admin, Counsellor, FDE, Certificate Manager, Trainer, Academic Controller)
-- Lead & Enrollment management with status workflows
-- Advanced payment system with installment plans
-- Certificate & Exam management with public request portal
-- Batch & Trainer management with attendance tracking
-- AI Analytics for lead insights
-- WhatsApp automations for reminders
-- Counsellor Incentive System for International Exams
-- Campaign Management for Branch Admin
-
-## User Personas & Permissions
-
-### 1. Super Admin
-- Full access to all branches and system settings
-
-### 2. Branch Admin
-- Full access to their branch
-- Financial stats (Collection, Pending, Revenue, Exam Revenue, Expenses, Net)
-- Campaign Management with analytics
-- Counsellor incentive oversight
-- All reports access
-
-### 3. Counsellor
-- Lead management, follow-ups, conversions
-- Earns 10% incentive on international exams
-- Reports: Leads reports only
-
-### 4. Front Desk Executive (FDE)
-- Enrollments, payments, student management
-- Edit student details EXCEPT name, phone, financial info
-- Reports: Leads, Income, Enrollments, Pending Payments
-- Dashboard: NO Income & Expense chart
-
-### 5. Certificate Manager
-- Certificate requests and processing only
-
-### 6. Trainer
-- Batch management with 6 auto-created fixed-time batches
-- Mark student attendance
-- Mark course completion
-- View all curricula
-- Sidebar: Only "My Dashboard" and "Curriculum"
-
-### 7. Academic Controller
-- Quiz exam creation and curriculum management
-- Sidebar: Only "Quiz Exams" and "Curriculum"
+- Multi-role access control (7 roles)
+- Lead & Enrollment management
+- Advanced payment system
+- Certificate & Exam management
+- Batch & Trainer management
+- **AI Analytics with real GPT-4o integration**
+- WhatsApp automations
+- Counsellor Incentive System
+- Campaign Management
 
 ## Features Implemented
 
-### P0 - Bug Fixes (Complete)
-- ✅ Exam Revenue showing ₹0 → Fixed
-- ✅ Academic Controller quiz creation → Fixed
+### AI-Powered Lead Insights (REAL GPT-4o)
+- **Model**: OpenAI GPT-4o via Emergent Integrations library
+- **Endpoint**: `/api/analytics/ai-leads-insights`
+- **Features**:
+  - Real-time lead data analysis
+  - Intelligent insights with priority levels (high/medium/low)
+  - Actionable recommendations
+  - Health score calculation (0-100)
+  - Graceful fallback to rule-based if LLM unavailable
+- **Response Time**: ~7 seconds for LLM call
+- **Frontend**: Shows "GPT-4o Powered" badge when AI is active
 
-### P1 - Features (Complete)
-- ✅ Removed Analytics tab (unused)
-- ✅ Campaign Management for Branch Admin
-- ✅ Edit Student in Students tab with role restrictions
+### User Roles & Permissions
+| Role | Key Features |
+|------|--------------|
+| Super Admin | Full access to all branches |
+| Branch Admin | Financial stats, Campaigns, Incentives, All reports |
+| Counsellor | Lead management, 10% exam incentive, AI Insights |
+| FDE | Enrollments, Limited reports, Restricted student editing |
+| Certificate Manager | Certificate processing only |
+| Trainer | Attendance, Course completion, Curriculum view |
+| Academic Controller | Quiz creation, Curriculum management |
+
+### Completed Features
+- ✅ Role-based sidebar navigation
+- ✅ Branch Admin Financial Stats (6 metrics)
+- ✅ Campaign Management with analytics
+- ✅ Counsellor Incentive System (10% on exams)
+- ✅ Trainer Attendance & Course Completion
+- ✅ Edit Student with role restrictions
 - ✅ Reports access control by role
-- ✅ FDE dashboard restrictions
+- ✅ Public Certificate Request Portal
+- ✅ Single Consolidated Payment Receipt
+- ✅ Lead form enhancements (Date, Discount Amount)
+- ✅ Multiple Aadhar document upload
+- ✅ **Real GPT-4o AI Insights**
 
-### P2 - Features (Complete)
-- ✅ **Trainer Attendance & Course Completion**
-  - 6 fixed-time batches auto-created for trainers
-  - Mark attendance (single and bulk)
-  - Mark course completion
-  - Validates trainer assignment
-- ✅ **Report Data Fixes**
-  - Payment model now includes student_name and program_name
-  - All payment records include student information for reports
-- ✅ **Single Consolidated Payment Receipt**
-  - Already implemented with professional layout
-  - Shows: Total Fee, Amount Paid, Total Paid (Till Date), Balance
-  - Includes student info, course, payment mode, terms
-- ✅ **Public Certificate Request Link**
-  - Accessible at `/certificate-request` without login
-  - Students enter enrollment number to request certificate
-
-### Previous Features (Complete)
-- Trainer role restrictions
-- Academic Controller role
-- Branch Admin Financial Stats (6 metrics)
-- AI-Powered Lead Insights (MOCKED)
-- Counsellor Incentive System (10% on exams)
-- Lead form enhancements (Lead Date, Discount Amount)
-- Multiple Aadhar document upload
-
-## Architecture
+## Technical Architecture
 
 ### Backend (FastAPI)
-- `server.py` (6060+ lines - NEEDS REFACTORING)
-- Key endpoints:
-  - `/api/trainer/dashboard` - Trainer stats and batches
-  - `/api/attendance` - Mark attendance
-  - `/api/attendance/bulk` - Bulk attendance
-  - `/api/course-completion` - Mark course complete
-  - `/api/public/enrollment/{number}` - Public enrollment lookup
-  - `/api/public/certificate-requests` - Public certificate submission
-  - `/api/campaigns` - Campaign CRUD
-  - `/api/campaigns/{id}/analytics` - Campaign analytics
+- `server.py` (6100+ lines)
+- MongoDB async driver (Motor)
+- JWT authentication
+- Emergent Integrations for LLM
+- Key AI endpoint:
+```python
+@api_router.get("/analytics/ai-leads-insights")
+async def get_ai_leads_insights(current_user):
+    # Uses LlmChat with gpt-4o model
+    # Returns ai_powered: true when LLM succeeds
+```
 
 ### Frontend (React)
-- `TrainerDashboard.js` - Trainer view with attendance
-- `CampaignManagement.js` - Campaign tracking
-- `CertificateRequestPage.js` - Public certificate request
-- `StudentsPage.js` - Enhanced with Edit + Receipt
+- Role-based Dashboard components
+- AI Insights display with GPT-4o badge
+- Recharts for data visualization
 
-## Database Schema
-
-### Key Collections
-- `users` - Multi-role users
-- `batches` - Auto-created for trainers (6 per trainer)
-- `attendances` - Student attendance records
-- `course_completions` - Course completion tracking
-- `payments` - Now includes student_name, program_name
-- `campaigns` - Marketing campaign tracking
-- `exam_bookings` - With incentive tracking
+## Test Reports
+- `/app/test_reports/iteration_16.json` - AI Integration (14/14 passed)
+- `/app/test_reports/iteration_15.json` - P2 Features (17/17 passed)
+- `/app/test_reports/iteration_14.json` - P1 Features (10/10 passed)
 
 ## Test Credentials
 | Role | Email | Password |
@@ -129,22 +86,9 @@ ETI Educom requires a comprehensive institute management system with:
 | Counsellor | counsellor@etieducom.com | password |
 | FDE | fde@etieducom.com | password |
 
-## Technical Debt (HIGH PRIORITY)
-1. **Refactor `server.py`** - Split into modular API routers (6060+ lines)
-2. **Refactor `AdminPanel.js`** - Role-specific components
-3. **Refactor `Layout.js`** - Simplify role-based logic
+## Technical Debt
+1. **Refactor `server.py`** - Split into modular routers (6100+ lines)
 
-## Remaining Tasks (Backlog)
-- WhatsApp Fee Reminders Automation (7,5,3,1 days before due)
+## Remaining Backlog
+- WhatsApp Fee Reminders Automation
 - Birthday Wishes Automation
-- Real LLM integration for AI Insights (currently mocked)
-
-## Known Issues
-- AI Insights uses MOCKED data (not real LLM)
-- Payment partial payment marks entire installment as "Paid"
-
-## Test Reports
-- `/app/test_reports/iteration_15.json` - P2 Features (17/17 passed)
-- `/app/test_reports/iteration_14.json` - P1 Features (10/10 passed)
-- `/app/test_reports/iteration_13.json` - Incentive System (5/5 passed)
-- `/app/test_reports/iteration_12.json` - Role features (9/9 passed)
