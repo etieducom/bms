@@ -47,6 +47,7 @@ class UserRole(str, Enum):
     FRONT_DESK = "Front Desk Executive"
     CERTIFICATE_MANAGER = "Certificate Manager"  # Manages certificate requests
     TRAINER = "Trainer"  # Trainer for batch management
+    ACADEMIC_CONTROLLER = "Academic Controller"  # Creates quiz exams and curriculum
 
 class LeadStatus(str, Enum):
     NEW = "New"
