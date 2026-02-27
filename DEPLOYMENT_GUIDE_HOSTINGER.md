@@ -1,5 +1,24 @@
 # ETI Educom BMS - Hostinger VPS Deployment Guide
 
+## Overview
+This guide walks you through deploying the ETI Educom Branch Management System on a Hostinger VPS from your GitHub repository.
+
+---
+
+## Step 0: Publish to GitHub (from Emergent)
+
+### 0.1 Save your code to GitHub
+1. In the Emergent chat interface, type: **"Save to GitHub"** or click the GitHub icon
+2. Choose your repository name (e.g., `eti-educom-bms`)
+3. The system will create a new repository with all your code
+4. Note down your repository URL: `https://github.com/YOUR_USERNAME/eti-educom-bms`
+
+### 0.2 Verify your repository
+- Go to GitHub and verify all files are uploaded
+- Key directories: `backend/`, `frontend/`, `DEPLOYMENT_GUIDE_HOSTINGER.md`
+
+---
+
 ## Prerequisites
 - Hostinger VPS with Ubuntu 22.04 or later
 - Domain name pointed to your VPS IP
