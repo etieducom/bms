@@ -4605,7 +4605,7 @@ async def get_campaign_analytics(campaign_id: str, current_user: User = Depends(
     leads = await db.leads.find(leads_query, {"_id": 0, "status": 1}).to_list(10000)
     
     total_leads_acquired = len(leads)
-    converted_leads = len([l for l in leads if l.get('status') == 'Converted'])
+    converted_leads = len([lead for lead in leads if lead.get('status') == 'Converted'])
     conversion_rate = (converted_leads / total_leads_acquired * 100) if total_leads_acquired > 0 else 0
     
     total_spend = campaign.get('total_spend', 0)
@@ -4614,7 +4614,7 @@ async def get_campaign_analytics(campaign_id: str, current_user: User = Depends(
     
     # Lead source breakdown (if source matches platform)
     platform = campaign.get('platform', '').lower()
-    leads_from_platform = len([l for l in leads if platform in l.get('source', '').lower()])
+    leads_from_platform = len([lead for lead in leads if platform in lead.get('source', '').lower()])
     
     return {
         "campaign": campaign,
@@ -4629,12 +4629,12 @@ async def get_campaign_analytics(campaign_id: str, current_user: User = Depends(
             "roi_indicator": "Positive" if conversion_rate > 10 else "Needs Improvement"
         },
         "lead_status_breakdown": {
-            "new": len([l for l in leads if l.get('status') == 'New']),
-            "contacted": len([l for l in leads if l.get('status') == 'Contacted']),
-            "demo_booked": len([l for l in leads if l.get('status') == 'Demo Booked']),
-            "follow_up": len([l for l in leads if l.get('status') == 'Follow-up']),
+            "new": len([lead for lead in leads if lead.get('status') == 'New']),
+            "contacted": len([lead for lead in leads if lead.get('status') == 'Contacted']),
+            "demo_booked": len([lead for lead in leads if lead.get('status') == 'Demo Booked']),
+            "follow_up": len([lead for lead in leads if lead.get('status') == 'Follow-up']),
             "converted": converted_leads,
-            "lost": len([l for l in leads if l.get('status') == 'Lost'])
+            "lost": len([lead for lead in leads if lead.get('status') == 'Lost'])
         }
     }
 
