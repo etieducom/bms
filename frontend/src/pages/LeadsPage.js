@@ -184,6 +184,8 @@ const LeadsPage = () => {
         program_id: selectedProgram || data.program_id,
         fee_quoted: data.fee_quoted ? parseFloat(data.fee_quoted) : null,
         discount_percent: data.discount_percent ? parseFloat(data.discount_percent) : null,
+        discount_amount: data.discount_amount ? parseFloat(data.discount_amount) : null,
+        lead_date: data.lead_date || new Date().toISOString().split('T')[0],
       };
 
       if (editingLead) {
