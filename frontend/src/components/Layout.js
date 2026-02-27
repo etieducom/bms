@@ -76,7 +76,10 @@ const Layout = ({ children }) => {
     { icon: Bell, label: 'Pending Follow-ups', path: '/followups', show: isCounsellor || isBranchAdmin },
     // Expenses - For Branch Admin and FDE
     { icon: Wallet, label: 'Expenses', path: '/expenses', show: isBranchAdmin || isFDE },
+    // Campaign Management - For Branch Admin only
+    { icon: Target, label: 'Campaigns', path: '/campaigns', show: isBranchAdmin },
     // Deleted Leads - For Branch Admin only (NOT Super Admin)
+    { icon: Trash2, label: 'Deleted Leads', path: '/deleted-leads', show: isBranchAdmin },
     { icon: Trash2, label: 'Deleted Leads', path: '/deleted-leads', show: isBranchAdmin },
     // Schools/Colleges Outreach - For all roles except Certificate Manager, Trainer, Academic Controller
     { icon: Building2, label: 'Schools/Colleges', path: '/organizations', show: !isCertManager && !isTrainer && !isAcademicController },
