@@ -181,6 +181,40 @@ export const batchAPI = {
   getTrainerStats: () => api.get('/trainer-stats'),
 };
 
+// Trainer API
+export const trainerAPI = {
+  getDashboard: () => api.get('/trainer/dashboard'),
+  getBatches: () => api.get('/trainer/batches'),
+};
+
+// Attendance API
+export const attendanceAPI = {
+  mark: (data) => api.post('/attendance', data),
+  markBulk: (data) => api.post('/attendance/bulk', data),
+  getBatch: (batchId, date) => api.get(`/attendance/${batchId}`, { params: { date } }),
+  getStudent: (enrollmentId) => api.get(`/attendance/student/${enrollmentId}`),
+};
+
+// Curriculum API
+export const curriculumAPI = {
+  getAll: (programId) => api.get('/curricula', { params: { program_id: programId } }),
+  get: (id) => api.get(`/curricula/${id}`),
+  create: (data) => api.post('/curricula', data),
+  update: (id, data) => api.put(`/curricula/${id}`, data),
+  delete: (id) => api.delete(`/curricula/${id}`),
+};
+
+// Course Completion API
+export const courseCompletionAPI = {
+  mark: (data) => api.post('/course-completion', null, { params: data }),
+  getAll: (batchId) => api.get('/course-completions', { params: { batch_id: batchId } }),
+};
+
+// Financial Stats API
+export const financialStatsAPI = {
+  get: () => api.get('/branch-admin/financial-stats'),
+};
+
 export const paymentPlanAPI = {
   edit: (planId, data) => api.put(`/payment-plans/${planId}/edit`, data),
   delete: (planId) => api.delete(`/payment-plans/${planId}`),
