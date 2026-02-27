@@ -200,6 +200,41 @@ const EnrollmentsPage = () => {
     }
   };
 
+  const handleMultipleAadharUpload = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    setUploadingAadhar(true);
+    const uploadedUrls = [...(enrollForm.aadhar_documents || [])];
+    
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const response = await uploadAPI.uploadImage(file);
+        uploadedUrls.push(response.data.url);
+      }
+      
+      setEnrollForm(prev => ({
+        ...prev,
+        aadhar_documents: uploadedUrls
+      }));
+      toast.success(`${files.length} Aadhar document(s) uploaded successfully`);
+    } catch (error) {
+      toast.error('Failed to upload Aadhar documents');
+    } finally {
+      setUploadingAadhar(false);
+    }
+  };
+
+  const removeAadharDocument = (index) => {
+    const updatedDocs = [...(enrollForm.aadhar_documents || [])];
+    updatedDocs.splice(index, 1);
+    setEnrollForm(prev => ({
+      ...prev,
+      aadhar_documents: updatedDocs
+    }));
+  };
+
   const handleCreatePaymentPlan = async () => {
     try {
       const planData = {
