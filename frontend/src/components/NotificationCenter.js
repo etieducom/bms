@@ -27,6 +27,9 @@ const NotificationCenter = () => {
     }
   }, []);
 
+  // Track shown notification alerts to avoid duplicates
+  const shownNotificationAlerts = useRef(new Set());
+
   // Fetch notifications and due-soon followups
   const fetchData = useCallback(async () => {
     try {
@@ -34,7 +37,36 @@ const NotificationCenter = () => {
         notificationsAPI.getAll(),
         notificationsAPI.getUnreadCount()
       ]);
-      setNotifications(notifRes.data);
+      
+      const allNotifications = notifRes.data;
+      
+      // Check for new unread notifications that should play audio
+      allNotifications.forEach(notif => {
+        if (!notif.is_read && notif.play_audio && !shownNotificationAlerts.current.has(notif.id)) {
+          shownNotificationAlerts.current.add(notif.id);
+          
+          // Play alarm sound
+          playAlarmSound();
+          
+          // Show browser notification
+          showBrowserNotification(notif.title, notif.message, notif.type);
+          
+          // Show in-app toast with action
+          if (notif.type === 'lead_converted') {
+            toast.success(notif.message, {
+              duration: 15000,
+              action: {
+                label: 'Enroll Now',
+                onClick: () => window.location.href = '/enrollments'
+              }
+            });
+          } else {
+            toast.info(notif.message, { duration: 10000 });
+          }
+        }
+      });
+      
+      setNotifications(allNotifications);
       setUnreadCount(countRes.data.count);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
