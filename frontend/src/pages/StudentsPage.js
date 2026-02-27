@@ -1581,6 +1581,29 @@ const StudentsPage = () => {
               </div>
             </div>
             
+            {/* Aadhar Documents Section */}
+            <div className="space-y-3 pt-4 border-t">
+              <Label className="font-semibold">Aadhar Documents</Label>
+              <div className="flex flex-wrap gap-2">
+                {editForm.aadhar_documents?.map((doc, idx) => (
+                  <div key={idx} className="relative">
+                    <img src={doc} alt={`Aadhar ${idx + 1}`} className="w-16 h-16 object-cover rounded border" />
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 w-5 h-5 p-0 rounded-full"
+                      onClick={() => removeAadharDoc(idx)}
+                    >×</Button>
+                  </div>
+                ))}
+                <label className="w-16 h-16 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50">
+                  <Upload className="w-4 h-4 text-slate-400" />
+                  <span className="text-xs text-slate-400">{uploadingAadhar ? '...' : 'Add'}</span>
+                  <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={handleAadharUpload} disabled={uploadingAadhar} />
+                </label>
+              </div>
+            </div>
+            
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button variant="outline" onClick={() => setEditDialog(false)}>Cancel</Button>
               <Button onClick={handleSaveEdit} disabled={savingEdit}>
