@@ -84,6 +84,7 @@ export const analyticsAPI = {
   getMonthlyFinancial: (year) => api.get(`/analytics/financial/monthly${year ? `?year=${year}` : ''}`),
   getBranchWiseFinancial: () => api.get('/analytics/financial/branch-wise'),
   getSuperAdminDashboard: () => api.get('/analytics/super-admin-dashboard'),
+  getAILeadsInsights: () => api.get('/analytics/ai-leads-insights'),
 };
 
 export const whatsappAPI = {
