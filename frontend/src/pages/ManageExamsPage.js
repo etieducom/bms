@@ -36,10 +36,29 @@ const ManageExamsPage = () => {
   const handleStatusChange = async (bookingId, newStatus) => {
     try {
       await examsAPI.updateBookingStatus(bookingId, newStatus);
-      toast.success('Status updated successfully');
+      
+      // Show appropriate message based on status
+      if (newStatus === 'Completed') {
+        toast.success('Exam marked as completed. Counsellor incentive (10%) has been credited.');
+      } else if (newStatus === 'Cancelled') {
+        toast.success('Exam cancelled. Refund is now pending.');
+      } else {
+        toast.success('Status updated successfully');
+      }
+      
       fetchBookings();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to update status');
+    }
+  };
+
+  const handleMarkRefundProcessed = async (bookingId) => {
+    try {
+      await examsAPI.markRefundProcessed(bookingId);
+      toast.success('Refund marked as processed');
+      fetchBookings();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to process refund');
     }
   };
 
