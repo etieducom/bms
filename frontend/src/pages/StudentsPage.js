@@ -805,6 +805,18 @@ const StudentsPage = () => {
                         >
                           <Eye className="w-4 h-4 text-blue-500" />
                         </Button>
+                        {/* Edit Student Button */}
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(student)}
+                            title="Edit Student"
+                            data-testid={`edit-student-${student.id}`}
+                          >
+                            <Edit className="w-4 h-4 text-green-500" />
+                          </Button>
+                        )}
                         {/* Add Course Button */}
                         {canPay && student.status === 'Active' && (
                           <Button
