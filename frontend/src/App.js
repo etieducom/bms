@@ -76,6 +76,16 @@ const HomeRedirect = () => {
     return <Navigate to="/certificates" replace />;
   }
   
+  // Trainer goes to their dedicated dashboard
+  if (user.role === 'Trainer') {
+    return <Navigate to="/trainer" replace />;
+  }
+  
+  // Academic Controller goes to curriculum page
+  if (user.role === 'Academic Controller') {
+    return <Navigate to="/curriculum" replace />;
+  }
+  
   // Everyone else goes to Dashboard
   return <Layout><Dashboard /></Layout>;
 };
