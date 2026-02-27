@@ -1964,10 +1964,6 @@ async def get_ai_leads_insights(current_user: User = Depends(get_current_user)):
     pending_followups = 0
     overdue_followups = 0
     
-    # Conversion tracking
-    conversion_time_sum = 0
-    conversion_count = 0
-    
     for lead in leads:
         status = lead.get('status', 'New')
         source = lead.get('lead_source', 'Unknown')
