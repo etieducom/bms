@@ -2092,10 +2092,11 @@ async def get_unread_notifications(current_user: User = Depends(get_current_user
     return notifications
 
 @api_router.put("/notifications/{notification_id}/read")
-async def mark_notification_read(notification_id: str, current_user: User = Depends(get_current_user)):
+async def mark_user_notification_read(notification_id: str, current_user: User = Depends(get_current_user)):
     """Mark a notification as read"""
+    # Try both user_id and recipient_ids schemas
     result = await db.notifications.update_one(
-        {"id": notification_id, "user_id": current_user.id},
+        {"id": notification_id, "$or": [{"user_id": current_user.id}, {"recipient_ids": current_user.id}]},
         {"$set": {"is_read": True}}
     )
     if result.matched_count == 0:
@@ -2103,10 +2104,11 @@ async def mark_notification_read(notification_id: str, current_user: User = Depe
     return {"message": "Notification marked as read"}
 
 @api_router.put("/notifications/mark-all-read")
-async def mark_all_notifications_read(current_user: User = Depends(get_current_user)):
+async def mark_all_user_notifications_read(current_user: User = Depends(get_current_user)):
     """Mark all notifications as read for the current user"""
+    # Try both schemas
     await db.notifications.update_many(
-        {"user_id": current_user.id, "is_read": False},
+        {"$or": [{"user_id": current_user.id}, {"recipient_ids": current_user.id}], "is_read": False},
         {"$set": {"is_read": True}}
     )
     return {"message": "All notifications marked as read"}
