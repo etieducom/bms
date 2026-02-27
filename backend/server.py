@@ -4751,6 +4751,129 @@ async def update_branch_exam_counter(branch_id: str):
     )
     return result.get('exam_counter', 1) if result else 1
 
+
+# ============ Counsellor Incentive Endpoints ============
+
+@api_router.get("/counsellor/incentives")
+async def get_counsellor_incentives(current_user: User = Depends(get_current_user)):
+    """Get incentive data for the logged-in counsellor"""
+    if current_user.role not in [UserRole.COUNSELLOR, UserRole.BRANCH_ADMIN, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Build query based on role
+    query = {"created_by": current_user.id}
+    if current_user.role == UserRole.ADMIN:
+        query = {}  # Super Admin sees all
+    elif current_user.role == UserRole.BRANCH_ADMIN:
+        query = {"branch_id": current_user.branch_id}  # Branch Admin sees all in their branch
+    
+    # Get all exam bookings by this counsellor
+    bookings = await db.exam_bookings.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Calculate totals
+    total_earned = sum(b.get('counsellor_incentive', 0) for b in bookings if b.get('incentive_status') == 'Earned')
+    total_pending = sum(round(b.get('exam_price', 0) * 0.10, 2) for b in bookings if b.get('status') in ['Pending', 'Confirmed'])
+    total_cancelled = sum(b.get('refund_amount', 0) for b in bookings if b.get('status') == 'Cancelled')
+    
+    # Group by status for detailed view
+    earned_bookings = [b for b in bookings if b.get('incentive_status') == 'Earned']
+    pending_bookings = [b for b in bookings if b.get('status') in ['Pending', 'Confirmed']]
+    cancelled_bookings = [b for b in bookings if b.get('status') == 'Cancelled']
+    
+    return {
+        "summary": {
+            "total_earned": total_earned,
+            "total_pending": total_pending,
+            "total_cancelled_refunds": total_cancelled,
+            "total_bookings": len(bookings),
+            "completed_count": len(earned_bookings),
+            "pending_count": len(pending_bookings),
+            "cancelled_count": len(cancelled_bookings)
+        },
+        "earned_bookings": earned_bookings,
+        "pending_bookings": pending_bookings,
+        "cancelled_bookings": cancelled_bookings
+    }
+
+@api_router.get("/branch-admin/incentive-stats")
+async def get_branch_incentive_stats(current_user: User = Depends(get_current_user)):
+    """Get incentive statistics for Branch Admin - shows all counsellors in their branch"""
+    if current_user.role not in [UserRole.BRANCH_ADMIN, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Only Branch Admin can view incentive stats")
+    
+    branch_filter = {}
+    if current_user.role == UserRole.BRANCH_ADMIN:
+        branch_filter["branch_id"] = current_user.branch_id
+    
+    # Get all exam bookings in the branch
+    bookings = await db.exam_bookings.find(branch_filter, {"_id": 0}).to_list(10000)
+    
+    # Get counsellors in the branch
+    counsellor_query = {"role": UserRole.COUNSELLOR.value}
+    if current_user.role == UserRole.BRANCH_ADMIN:
+        counsellor_query["branch_id"] = current_user.branch_id
+    counsellors = await db.users.find(counsellor_query, {"_id": 0, "id": 1, "name": 1, "email": 1}).to_list(100)
+    
+    # Calculate per-counsellor stats
+    counsellor_stats = []
+    for counsellor in counsellors:
+        c_bookings = [b for b in bookings if b.get('created_by') == counsellor['id']]
+        earned = sum(b.get('counsellor_incentive', 0) for b in c_bookings if b.get('incentive_status') == 'Earned')
+        pending = sum(round(b.get('exam_price', 0) * 0.10, 2) for b in c_bookings if b.get('status') in ['Pending', 'Confirmed'])
+        
+        counsellor_stats.append({
+            "counsellor_id": counsellor['id'],
+            "counsellor_name": counsellor['name'],
+            "counsellor_email": counsellor['email'],
+            "total_bookings": len(c_bookings),
+            "earned_incentive": earned,
+            "pending_incentive": pending,
+            "completed_exams": len([b for b in c_bookings if b.get('status') == 'Completed']),
+            "cancelled_exams": len([b for b in c_bookings if b.get('status') == 'Cancelled'])
+        })
+    
+    # Branch totals
+    total_earned = sum(b.get('counsellor_incentive', 0) for b in bookings if b.get('incentive_status') == 'Earned')
+    total_pending = sum(round(b.get('exam_price', 0) * 0.10, 2) for b in bookings if b.get('status') in ['Pending', 'Confirmed'])
+    total_refunds = sum(b.get('refund_amount', 0) for b in bookings if b.get('status') == 'Cancelled')
+    
+    return {
+        "branch_summary": {
+            "total_earned_incentives": total_earned,
+            "total_pending_incentives": total_pending,
+            "total_refunds_pending": total_refunds,
+            "total_exam_bookings": len(bookings),
+            "completed_exams": len([b for b in bookings if b.get('status') == 'Completed']),
+            "cancelled_exams": len([b for b in bookings if b.get('status') == 'Cancelled'])
+        },
+        "counsellor_stats": counsellor_stats
+    }
+
+@api_router.put("/exam-bookings/{booking_id}/refund")
+async def mark_refund_processed(booking_id: str, current_user: User = Depends(require_role([UserRole.BRANCH_ADMIN, UserRole.ADMIN]))):
+    """Mark a cancelled exam's refund as processed - Branch Admin only"""
+    booking = await db.exam_bookings.find_one({"id": booking_id}, {"_id": 0})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    if booking.get('status') != 'Cancelled':
+        raise HTTPException(status_code=400, detail="Only cancelled bookings can have refunds processed")
+    
+    if current_user.role == UserRole.BRANCH_ADMIN and booking.get('branch_id') != current_user.branch_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    await db.exam_bookings.update_one(
+        {"id": booking_id},
+        {"$set": {
+            "refund_status": "Processed",
+            "refund_processed_at": datetime.now(timezone.utc).isoformat(),
+            "refund_processed_by": current_user.id
+        }}
+    )
+    
+    return {"message": "Refund marked as processed"}
+
+
 # ============ Quiz-Based Exams Endpoints ============
 
 @api_router.post("/quiz-exams")
