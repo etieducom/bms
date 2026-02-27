@@ -802,6 +802,7 @@ class Enrollment(BaseModel):
     # Photo uploads
     student_photo_url: Optional[str] = None
     aadhar_photo_url: Optional[str] = None
+    aadhar_documents: Optional[List[str]] = None  # Multiple aadhar images/PDFs
     
     # Academic Info
     highest_qualification: Optional[str] = None
@@ -814,6 +815,7 @@ class Enrollment(BaseModel):
     program_name: str
     fee_quoted: float
     discount_percent: Optional[float] = None
+    discount_amount: Optional[float] = None  # Direct amount discount
     final_fee: float
     
     # Status
@@ -846,9 +848,11 @@ class EnrollmentCreate(BaseModel):
     program_id: str
     fee_quoted: float
     discount_percent: Optional[float] = None
+    discount_amount: Optional[float] = None  # Direct amount discount
     enrollment_date: str
     student_photo_url: Optional[str] = None
     aadhar_photo_url: Optional[str] = None
+    aadhar_documents: Optional[List[str]] = None  # Multiple aadhar images/PDFs
 
 # Payment Management
 class PaymentPlan(BaseModel):
