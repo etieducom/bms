@@ -1229,6 +1229,17 @@ const EnrollmentsPage = () => {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Or Discount Amount (₹)</Label>
+                  <Input
+                    type="number"
+                    value={enrollForm.discount_amount}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, discount_amount: e.target.value })}
+                    placeholder="Direct discount in rupees"
+                  />
+                </div>
+              </div>
               <Card className="bg-green-50 border-green-200">
                 <CardContent className="pt-4">
                   <div className="flex justify-between items-center">
