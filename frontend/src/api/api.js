@@ -326,6 +326,11 @@ export const notificationAPI = {
   getFollowupReminders: () => api.get('/notifications/followup-reminders'),
 };
 
+// AI Analytics API
+export const aiAnalyticsAPI = {
+  getBranchInsights: () => api.get('/analytics/ai-branch-insights'),
+};
+
 // Cash Handling API
 export const cashHandlingAPI = {
   getToday: () => api.get('/cash-handling/today'),
