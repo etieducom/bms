@@ -217,6 +217,15 @@ export const financialStatsAPI = {
   get: () => api.get('/branch-admin/financial-stats'),
 };
 
+// Campaign Management API
+export const campaignAPI = {
+  getAll: () => api.get('/campaigns'),
+  create: (data) => api.post('/campaigns', data),
+  update: (id, data) => api.put(`/campaigns/${id}`, data),
+  delete: (id) => api.delete(`/campaigns/${id}`),
+  getAnalytics: (id) => api.get(`/campaigns/${id}/analytics`),
+};
+
 export const paymentPlanAPI = {
   edit: (planId, data) => api.put(`/payment-plans/${planId}/edit`, data),
   delete: (planId) => api.delete(`/payment-plans/${planId}`),
