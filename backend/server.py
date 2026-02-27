@@ -2441,7 +2441,7 @@ async def get_ai_branch_insights(current_user: User = Depends(require_role([User
         # Get batches assigned to this trainer
         batches = await db.batches.find(
             {**branch_filter, "trainer_id": trainer['id']},
-            {"_id": 0, "id": 1, "batch_name": 1, "schedule": 1}
+            {"_id": 0, "id": 1, "name": 1, "schedule": 1}
         ).to_list(100)
         
         # Get students in these batches
@@ -2453,7 +2453,7 @@ async def get_ai_branch_insights(current_user: User = Depends(require_role([User
             "trainer_id": trainer['id'],
             "total_batches": len(batches),
             "total_students": students_count,
-            "batches": [{"name": b['batch_name'], "schedule": b.get('schedule', 'Not set')} for b in batches[:5]]
+            "batches": [{"name": b.get('name', 'Unnamed'), "schedule": b.get('schedule', 'Not set')} for b in batches[:5]]
         })
     
     # === INCOME ANALYSIS ===
