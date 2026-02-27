@@ -321,6 +321,107 @@ const Dashboard = () => {
       </div>
       )}
 
+      {/* Branch Admin Financial Stats */}
+      {isBranchAdmin && branchFinancialStats && (
+        <Card className="border-slate-200 shadow-soft" data-testid="branch-financial-stats">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold flex items-center gap-2">
+              <Wallet className="w-5 h-5" /> Financial Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+              <Card className="bg-green-50 border-green-200">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-green-600" />
+                    <span className="text-xs text-green-700">Total Collection</span>
+                  </div>
+                  <p className="text-xl font-bold text-green-700 mt-1">
+                    ₹{branchFinancialStats.total_collections?.toLocaleString() || 0}
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-orange-50 border-orange-200">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2">
+                    <Receipt className="w-5 h-5 text-orange-600" />
+                    <span className="text-xs text-orange-700">Pending Amount</span>
+                  </div>
+                  <p className="text-xl font-bold text-orange-700 mt-1">
+                    ₹{branchFinancialStats.pending_amounts?.toLocaleString() || 0}
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-blue-600" />
+                    <span className="text-xs text-blue-700">Monthly Revenue</span>
+                  </div>
+                  <p className="text-xl font-bold text-blue-700 mt-1">
+                    ₹{branchFinancialStats.monthly_revenue?.toLocaleString() || 0}
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-purple-50 border-purple-200">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="w-5 h-5 text-purple-600" />
+                    <span className="text-xs text-purple-700">Exam Revenue</span>
+                  </div>
+                  <p className="text-xl font-bold text-purple-700 mt-1">
+                    ₹{branchFinancialStats.exam_revenue?.toLocaleString() || 0}
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-red-50 border-red-200">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2">
+                    <ArrowDownRight className="w-5 h-5 text-red-600" />
+                    <span className="text-xs text-red-700">Total Expenses</span>
+                  </div>
+                  <p className="text-xl font-bold text-red-700 mt-1">
+                    ₹{branchFinancialStats.total_expenses?.toLocaleString() || 0}
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-slate-100 border-slate-300">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-slate-600" />
+                    <span className="text-xs text-slate-700">Net Revenue</span>
+                  </div>
+                  <p className={`text-xl font-bold mt-1 ${branchFinancialStats.net_revenue >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                    ₹{branchFinancialStats.net_revenue?.toLocaleString() || 0}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+            
+            {/* Trainer Stats */}
+            {branchFinancialStats.trainer_stats?.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-sm font-semibold text-slate-700 mb-3">Trainer-wise Student Count</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {branchFinancialStats.trainer_stats.map((trainer) => (
+                    <div key={trainer.trainer_id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border">
+                      <span className="text-sm font-medium text-slate-700">{trainer.trainer_name}</span>
+                      <Badge className="bg-blue-100 text-blue-700">{trainer.unique_student_count} students</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* AI-Powered Lead Insights - For Counsellors and Branch Admins */}
       {showAIInsights && aiInsights && (
         <div className="space-y-4" data-testid="ai-insights-section">
