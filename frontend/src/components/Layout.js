@@ -46,10 +46,10 @@ const Layout = ({ children }) => {
   // Dashboard, Leads, Enrollments, Students, All Payments, Pending Payments, 
   // International Exams, Manage Exams, Quiz Exams, Tasks, Analytics, Reports, Resources
   const navItems = [
-    // 1. Dashboard - NOT for Certificate Manager
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/', show: !isCertManager },
-    // 2. Leads - NOT for Certificate Manager
-    { icon: Users, label: 'Leads', path: '/leads', show: !isCertManager },
+    // 1. Dashboard - NOT for Certificate Manager, Trainer, or Academic Controller
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/', show: !isCertManager && !isTrainer && !isAcademicController },
+    // 2. Leads - NOT for Certificate Manager, Trainer, or Academic Controller
+    { icon: Users, label: 'Leads', path: '/leads', show: !isCertManager && !isTrainer && !isAcademicController },
     // 3. Enrollments - For Branch Admin and FDE
     { icon: FileSpreadsheet, label: 'Enrollments', path: '/enrollments', show: isBranchAdmin || isFDE },
     // 4. Students - For Branch Admin and FDE
@@ -62,29 +62,29 @@ const Layout = ({ children }) => {
     { icon: Globe, label: 'International Exams', path: '/international-exams', show: isBranchAdmin || isCounsellor || isFDE },
     // 8. Manage Exams - For Branch Admin, Counsellor and FDE
     { icon: ClipboardList, label: 'Manage Exams', path: '/manage-exams', show: isBranchAdmin || isCounsellor || isFDE },
-    // 9. Quiz Exams - For Super Admin and FDE
-    { icon: BookOpen, label: 'Quiz Exams', path: '/quiz-exams', show: isSuperAdmin || isFDE },
+    // 9. Quiz Exams - For Academic Controller and FDE (to view)
+    { icon: BookOpen, label: 'Quiz Exams', path: '/quiz-exams', show: isAcademicController || isFDE },
     // 10. Tasks - For Branch Admin, Counsellor and FDE
     { icon: CheckSquare, label: 'Tasks', path: '/tasks', show: isBranchAdmin || isCounsellor || isFDE },
-    // 11. Analytics - NOT for Certificate Manager or Trainer
-    { icon: BarChart3, label: 'Analytics', path: '/analytics', show: !isCertManager && !isTrainer },
-    // 12. Reports - NOT for Certificate Manager or Trainer
-    { icon: FileText, label: 'Reports', path: '/reports', show: !isCertManager && !isTrainer },
-    // 13. Resources - NOT for Certificate Manager or Trainer
-    { icon: Folder, label: 'Resources', path: '/resources', show: !isCertManager && !isTrainer },
+    // 11. Analytics - NOT for Certificate Manager, Trainer, or Academic Controller
+    { icon: BarChart3, label: 'Analytics', path: '/analytics', show: !isCertManager && !isTrainer && !isAcademicController },
+    // 12. Reports - NOT for Certificate Manager, Trainer, or Academic Controller
+    { icon: FileText, label: 'Reports', path: '/reports', show: !isCertManager && !isTrainer && !isAcademicController },
+    // 13. Resources - NOT for Certificate Manager, Trainer, or Academic Controller
+    { icon: Folder, label: 'Resources', path: '/resources', show: !isCertManager && !isTrainer && !isAcademicController },
     // --- Additional items below the main navigation ---
     // Pending Follow-ups - For Counsellors and Branch Admins only
     { icon: Bell, label: 'Pending Follow-ups', path: '/followups', show: isCounsellor || isBranchAdmin },
     // Expenses - For Branch Admin and FDE
     { icon: Wallet, label: 'Expenses', path: '/expenses', show: isBranchAdmin || isFDE },
-    // Deleted Leads - For Super Admin and Branch Admin
-    { icon: Trash2, label: 'Deleted Leads', path: '/deleted-leads', show: isSuperAdmin || isBranchAdmin },
-    // Schools/Colleges Outreach - For all roles except Certificate Manager or Trainer
-    { icon: Building2, label: 'Schools/Colleges', path: '/organizations', show: !isCertManager && !isTrainer },
+    // Deleted Leads - For Branch Admin only (NOT Super Admin)
+    { icon: Trash2, label: 'Deleted Leads', path: '/deleted-leads', show: isBranchAdmin },
+    // Schools/Colleges Outreach - For all roles except Certificate Manager, Trainer, Academic Controller
+    { icon: Building2, label: 'Schools/Colleges', path: '/organizations', show: !isCertManager && !isTrainer && !isAcademicController },
     // Batch Management - For Branch Admin, Super Admin, Front Desk, Counsellor
     { icon: UsersRound, label: 'Batches', path: '/batches', show: isBranchAdmin || isSuperAdmin || isFDE || isCounsellor },
-    // Curriculum Management - For Super Admin only
-    { icon: BookOpen, label: 'Curriculum', path: '/curriculum', show: isSuperAdmin },
+    // Curriculum Management - For Academic Controller only
+    { icon: BookOpen, label: 'Curriculum', path: '/curriculum', show: isAcademicController },
     // Certificates - For Super Admin
     { icon: Award, label: 'Certificates', path: '/certificates', show: isSuperAdmin },
     // Admin Panel - For Super Admin and Branch Admin (Branch Admin only sees limited tabs)
@@ -94,6 +94,8 @@ const Layout = ({ children }) => {
     { icon: Award, label: 'Ready Certificates', path: '/certificates?status=Ready', show: isCertManager },
     // Trainer Dashboard - For Trainers only
     { icon: GraduationCap, label: 'My Dashboard', path: '/trainer', show: isTrainer },
+    // Academic Controller sees Curriculum and Quiz Exams
+    { icon: BookOpen, label: 'My Curriculum', path: '/curriculum', show: isAcademicController },
   ].filter(item => item.show);
 
   const handleLogout = () => {
