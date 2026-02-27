@@ -913,11 +913,18 @@ const StudentsPage = () => {
                             Pay Fee
                           </Button>
                         )}
-                        {/* No Plan Badge */}
-                        {!student.has_payment_plan && (student.total_paid || 0) < (student.final_fee || 0) && (
-                          <Badge variant="outline" className="text-orange-600 border-orange-300">
-                            No Plan
-                          </Badge>
+                        {/* Create Payment Plan Button - Only show if no plan exists */}
+                        {canPay && !student.has_payment_plan && (student.total_paid || 0) < (student.final_fee || 0) && student.status === 'Active' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-orange-600 border-orange-400 hover:bg-orange-50"
+                            onClick={() => openCreatePlanDialog(student)}
+                            data-testid={`create-plan-${student.id}`}
+                          >
+                            <PlusCircle className="w-4 h-4 mr-1" />
+                            Create Plan
+                          </Button>
                         )}
                         {/* View Details Button */}
                         <Button
