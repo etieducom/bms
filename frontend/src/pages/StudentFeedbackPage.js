@@ -53,7 +53,7 @@ const StudentFeedbackPage = () => {
   // For Branch Admin - summary view
   const [summaryData, setSummaryData] = useState(null);
   const [availableMonths, setAvailableMonths] = useState([]);
-  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [loadingSummary, setLoadingSummary] = useState(true); // Start true to show loading initially
 
   useEffect(() => {
     if (isBranchAdmin) {
