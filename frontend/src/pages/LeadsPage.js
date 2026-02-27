@@ -619,6 +619,22 @@ const LeadsPage = () => {
                 />
               </div>
               <div className="space-y-2">
+                <Label>Discount Amount (₹)</Label>
+                <Input 
+                  type="number" 
+                  {...register('discount_amount')} 
+                  placeholder="Direct discount in rupees"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Lead Date</Label>
+                <Input 
+                  type="date" 
+                  {...register('lead_date')} 
+                  defaultValue={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label>Payment Plan</Label>
                 <Input {...register('payment_plan')} />
               </div>
