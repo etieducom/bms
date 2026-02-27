@@ -239,7 +239,11 @@ class ExamBooking(BaseModel):
     status: str = "Pending"  # Pending, Confirmed, Completed, Cancelled
     exam_date: Optional[str] = None
     notes: Optional[str] = None
-    created_by: str
+    created_by: str  # Counsellor who booked the exam (for incentive tracking)
+    counsellor_incentive: float = 0.0  # 10% of exam_price when completed
+    incentive_status: str = "Pending"  # Pending, Earned, Cancelled
+    refund_status: Optional[str] = None  # None, Pending, Processed (when cancelled)
+    refund_amount: Optional[float] = None  # Amount to refund when cancelled
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # Quiz-Based Exams
