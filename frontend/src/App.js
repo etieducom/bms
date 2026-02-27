@@ -245,6 +245,22 @@ function App() {
               </PrivateRoute>
             }
           />
+          <Route
+            path="/trainer"
+            element={
+              <PrivateRoute trainerOnly>
+                <Layout><TrainerDashboard /></Layout>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/curriculum"
+            element={
+              <PrivateRoute adminOnly>
+                <Layout><CurriculumPage /></Layout>
+              </PrivateRoute>
+            }
+          />
           {/* Public routes - no auth required */}
           <Route path="/exam/:examId" element={<PublicExamPage />} />
           <Route path="/certificate-request" element={<CertificateRequestPage />} />
