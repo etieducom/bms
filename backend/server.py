@@ -2799,6 +2799,8 @@ async def create_payment(payment: PaymentCreate, current_user: User = Depends(ge
         receipt_number=custom_receipt_id or f"RCP-{str(uuid.uuid4())[:8].upper()}",
         branch_id=branch_id,
         payment_date=datetime.fromisoformat(payment.payment_date).date(),
+        student_name=enrollment.get('student_name', ''),
+        program_name=enrollment.get('program_name', ''),
         created_by=current_user.id
     )
     
