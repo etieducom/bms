@@ -2966,7 +2966,7 @@ async def get_enrollments(current_user: User = Depends(get_current_user)):
 # Payment Plan Management
 @api_router.post("/payment-plans", response_model=PaymentPlan)
 async def create_payment_plan(plan: PaymentPlanCreate, current_user: User = Depends(get_current_user)):
-    if current_user.role not in [UserRole.ADMIN, UserRole.FRONT_DESK]:
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_ADMIN, UserRole.FRONT_DESK]:
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     
     # Check if enrollment exists
