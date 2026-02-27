@@ -2,8 +2,12 @@
 
 ## Status: ✅ ALL REQUIREMENTS COMPLETE (Feb 27, 2026)
 
-## Original Problem Statement
-ETI Educom comprehensive institute management system with multi-role access control and full-featured modules.
+## Latest Update (Feb 27, 2026 - Session 2)
+- ✅ Cash Handling System for FDE and Branch Admin
+- ✅ Fixed Create Payment Plan bug from Students page
+- ✅ Removed Plan button from Enrollments Enrolled tab
+- ✅ Lead Converted notifications to FDE with audio alert
+- ✅ Follow-up reminders 10 minutes before scheduled time
 
 ## All Features - COMPLETE ✅
 
@@ -18,6 +22,8 @@ ETI Educom comprehensive institute management system with multi-role access cont
 | Curriculum Management | ✅ Complete |
 | Campaign Management | ✅ Complete |
 | Student Feedback System | ✅ Complete |
+| **Cash Handling System** | ✅ Complete |
+| **Notification System** | ✅ Complete |
 
 ### AI & Automation
 | Feature | Status |
@@ -27,14 +33,16 @@ ETI Educom comprehensive institute management system with multi-role access cont
 | WhatsApp Fee Reminders | ✅ Complete |
 | WhatsApp Birthday Wishes | ✅ Complete |
 | Counsellor Incentive System | ✅ Complete |
+| **Follow-up Audio Reminders** | ✅ Complete |
+| **Lead Converted FDE Alert** | ✅ Complete |
 
 ### Role Permissions
 | Role | Access |
 |------|--------|
 | Super Admin | Full access all branches |
-| Branch Admin | Financial stats, Campaigns, Reports, Feedback Analysis |
-| Counsellor | Leads, AI Insights, Incentives, Feedback Collection |
-| FDE | Enrollments, Payments, Limited reports |
+| Branch Admin | Financial stats, Campaigns, Reports, Feedback Analysis, Cash Handling History |
+| Counsellor | Leads, AI Insights, Incentives, Feedback Collection, Follow-up Reminders |
+| FDE | Enrollments, Payments, Cash Handling (submit deposits), Lead Converted Alerts |
 | Certificate Manager | Certificates only |
 | Trainer | Attendance, Curriculum (all curricula visible) |
 | Academic Controller | Quiz creation, Curriculum management |
@@ -47,35 +55,36 @@ ETI Educom comprehensive institute management system with multi-role access cont
 | Trainer | trainer@etieducom.com | password123 |
 | Academic Controller | academic@etieducom.com | password |
 | Counsellor | counsellor@etieducom.com | password123 |
-| FDE | fde@etieducom.com | password |
+| FDE | fde@etieducom.com | password123 |
 
-## Key API Endpoints
+## New API Endpoints
 
-### Student Feedback
-- `GET /api/feedback/list` - Students for feedback (Counsellor)
-- `POST /api/feedback` - Submit feedback
-- `GET /api/feedback/summary?month=YYYY-MM` - AI analysis (Branch Admin)
-- `GET /api/feedback/months` - Available months
+### Cash Handling
+- `GET /api/cash-handling/today` - Today's cash for FDE
+- `POST /api/cash-handling/submit` - Submit deposit record
+- `GET /api/cash-handling/history` - History for Branch Admin (with date filters)
 
-### Payments
-- `POST /api/payments` - Record payment (handles partial payments correctly)
-- `POST /api/payment-plans` - Create payment plan
-- `GET /api/enrollments/{id}/payment-plan` - Get plan details
+### Notifications
+- `GET /api/notifications` - All notifications
+- `GET /api/notifications/unread` - Unread notifications
+- `PUT /api/notifications/{id}/read` - Mark as read
+- `PUT /api/notifications/mark-all-read` - Mark all read
+- `GET /api/notifications/followup-reminders` - Follow-ups due in 10 min
 
 ## Technical Stack
 - **Frontend:** React, Tailwind CSS, Shadcn/UI
 - **Backend:** FastAPI, Motor (async MongoDB)
 - **AI:** OpenAI GPT-4o via Emergent Integrations
 - **Messaging:** MSG91 WhatsApp API
+- **Notifications:** Browser Push + In-app Audio
 
-## Verified & Working
-- ✅ Partial payment handling (redistributes to remaining installments)
-- ✅ Student sorting (latest first)
-- ✅ Trainer curriculum view
-- ✅ All role-based access controls
-- ✅ WhatsApp automations
+## Test Reports
+- `/app/test_reports/iteration_17.json` - Cash Handling & Notifications (100% passed)
+- `/app/test_reports/pytest/pytest_results_iteration17.xml`
 
-## Future Enhancements (Optional)
-- Refactor StudentsPage.js (1800+ lines)
-- Bulk student import via Excel
-- WhatsApp reminders for feedback collection
+## Key Changes This Session
+1. **Cash Handling Page** (`/app/frontend/src/pages/CashHandlingPage.js`) - NEW
+2. **Notifications API** - Extended for user_id based notifications
+3. **Students Page** - Fixed Create Plan button (enum values corrected)
+4. **Enrollments Page** - Removed Plan button from Enrolled tab
+5. **Layout** - Added Cash Handling sidebar for FDE/Branch Admin
