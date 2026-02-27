@@ -3298,6 +3298,53 @@ async def cancel_enrollment(enrollment_id: str, reason: str = "", current_user: 
     
     return {"message": "Enrollment cancelled successfully"}
 
+class StudentUpdateModel(BaseModel):
+    """Model for updating student details after enrollment"""
+    student_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    gender: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pincode: Optional[str] = None
+    highest_qualification: Optional[str] = None
+    institution_name: Optional[str] = None
+    passing_year: Optional[str] = None
+    percentage: Optional[float] = None
+    student_photo_url: Optional[str] = None
+    aadhar_photo_url: Optional[str] = None
+    aadhar_documents: Optional[List[str]] = None
+
+@api_router.put("/students/{enrollment_id}/update")
+async def update_student_details(enrollment_id: str, data: StudentUpdateModel, current_user: User = Depends(get_current_user)):
+    """Update student details after enrollment - FDE, Branch Admin, or Admin"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_ADMIN, UserRole.FRONT_DESK]:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    enrollment = await db.enrollments.find_one({"id": enrollment_id}, {"_id": 0})
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Branch access check
+    if current_user.role != UserRole.ADMIN and enrollment.get('branch_id') != current_user.branch_id:
+        raise HTTPException(status_code=403, detail="You can only update students from your branch")
+    
+    # Build update data (only include non-None values)
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data to update")
+    
+    await db.enrollments.update_one(
+        {"id": enrollment_id},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Student details updated successfully"}
+
+
 @api_router.put("/students/{enrollment_id}/status")
 async def update_enrollment_status(enrollment_id: str, status: str, reason: str = "", current_user: User = Depends(get_current_user)):
     """Update enrollment status (Active, Dropped, Inactive, Cancelled) - Branch Admin only"""
