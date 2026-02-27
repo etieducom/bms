@@ -517,7 +517,21 @@ const StudentsPage = () => {
     if (dateTo && enrollmentDate > dateTo) return false;
     
     return true;
+  }).sort((a, b) => {
+    // Sort by enrollment date descending (most recent first)
+    const dateA = a.enrollment_date || a.created_at || '';
+    const dateB = b.enrollment_date || b.created_at || '';
+    return dateB.localeCompare(dateA);
   });
+  
+  // Paginated students
+  const paginatedStudents = filteredStudents.slice(
+    (currentPage - 1) * studentsPerPage,
+    currentPage * studentsPerPage
+  );
+  
+  // Reset page when filters change
+  const resetPagination = () => setCurrentPage(1);
 
   const getStatusBadge = (status) => {
     switch (status) {
