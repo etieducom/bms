@@ -2418,6 +2418,193 @@ Provide 3-5 insights and 3-4 recommendations. Focus on:
     }
 
 
+@api_router.get("/analytics/ai-branch-insights")
+async def get_ai_branch_insights(current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))):
+    """Get comprehensive AI-powered branch analytics - For Branch Admins only"""
+    branch_id = current_user.branch_id
+    branch_filter = {"branch_id": branch_id} if branch_id else {}
+    
+    today = datetime.now(timezone.utc)
+    today_str = today.strftime('%Y-%m-%d')
+    month_start = today.replace(day=1).strftime('%Y-%m-%d')
+    last_month_start = (today.replace(day=1) - timedelta(days=1)).replace(day=1).strftime('%Y-%m-%d')
+    last_month_end = (today.replace(day=1) - timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    # === TRAINER WORKLOAD ANALYSIS ===
+    trainers = await db.users.find(
+        {**branch_filter, "role": UserRole.TRAINER.value, "is_active": True},
+        {"_id": 0, "id": 1, "name": 1, "email": 1}
+    ).to_list(100)
+    
+    trainer_workload = []
+    for trainer in trainers:
+        # Get batches assigned to this trainer
+        batches = await db.batches.find(
+            {**branch_filter, "trainer_id": trainer['id']},
+            {"_id": 0, "id": 1, "batch_name": 1, "schedule": 1}
+        ).to_list(100)
+        
+        # Get students in these batches
+        batch_ids = [b['id'] for b in batches]
+        students_count = await db.enrollments.count_documents({"batch_id": {"$in": batch_ids}, "status": "Active"})
+        
+        trainer_workload.append({
+            "trainer_name": trainer.get('name', trainer['email']),
+            "trainer_id": trainer['id'],
+            "total_batches": len(batches),
+            "total_students": students_count,
+            "batches": [{"name": b['batch_name'], "schedule": b.get('schedule', 'Not set')} for b in batches[:5]]
+        })
+    
+    # === INCOME ANALYSIS ===
+    # This month's income
+    this_month_payments = await db.payments.find(
+        {**branch_filter, "payment_date": {"$gte": month_start, "$lte": today_str}},
+        {"_id": 0, "amount": 1, "payment_mode": 1}
+    ).to_list(10000)
+    
+    this_month_income = sum(p.get('amount', 0) for p in this_month_payments)
+    income_by_mode = {}
+    for p in this_month_payments:
+        mode = p.get('payment_mode', 'Other')
+        income_by_mode[mode] = income_by_mode.get(mode, 0) + p.get('amount', 0)
+    
+    # Last month's income for comparison
+    last_month_payments = await db.payments.find(
+        {**branch_filter, "payment_date": {"$gte": last_month_start, "$lte": last_month_end}},
+        {"_id": 0, "amount": 1}
+    ).to_list(10000)
+    last_month_income = sum(p.get('amount', 0) for p in last_month_payments)
+    
+    income_growth = ((this_month_income - last_month_income) / last_month_income * 100) if last_month_income > 0 else 0
+    
+    # === STUDENT PERFORMANCE ===
+    active_students = await db.enrollments.count_documents({**branch_filter, "status": "Active"})
+    completed_students = await db.enrollments.count_documents({**branch_filter, "status": "Completed"})
+    
+    # Fee collection efficiency
+    total_fee = await db.enrollments.aggregate([
+        {"$match": {**branch_filter, "status": "Active"}},
+        {"$group": {"_id": None, "total": {"$sum": "$final_fee"}, "paid": {"$sum": "$total_paid"}}}
+    ]).to_list(1)
+    
+    fee_efficiency = 0
+    total_pending = 0
+    if total_fee and total_fee[0].get('total', 0) > 0:
+        fee_efficiency = round(total_fee[0].get('paid', 0) / total_fee[0].get('total', 1) * 100, 1)
+        total_pending = total_fee[0].get('total', 0) - total_fee[0].get('paid', 0)
+    
+    # === LEAD FUNNEL ===
+    total_leads = await db.leads.count_documents({**branch_filter, "is_deleted": {"$ne": True}})
+    converted_leads = await db.leads.count_documents({**branch_filter, "status": "Converted", "is_deleted": {"$ne": True}})
+    conversion_rate = round(converted_leads / total_leads * 100, 1) if total_leads > 0 else 0
+    
+    # === BUILD SUMMARY FOR AI ===
+    analytics_summary = f"""
+Branch Analytics Summary:
+
+TRAINER WORKLOAD:
+{json.dumps(trainer_workload, indent=2)}
+
+INCOME ANALYSIS:
+- This Month Income: ₹{this_month_income:,.0f}
+- Last Month Income: ₹{last_month_income:,.0f}
+- Growth: {income_growth:.1f}%
+- Income by Payment Mode: {json.dumps(income_by_mode)}
+
+STUDENT METRICS:
+- Active Students: {active_students}
+- Completed Students: {completed_students}
+- Fee Collection Efficiency: {fee_efficiency}%
+- Total Pending Fees: ₹{total_pending:,.0f}
+
+LEAD CONVERSION:
+- Total Leads: {total_leads}
+- Converted: {converted_leads}
+- Conversion Rate: {conversion_rate}%
+"""
+
+    # === AI ANALYSIS ===
+    ai_analysis = None
+    if LLM_AVAILABLE and os.environ.get('EMERGENT_LLM_KEY'):
+        try:
+            chat = LlmChat(
+                api_key=os.environ.get('EMERGENT_LLM_KEY'),
+                session_id=f"branch-analytics-{branch_id}-{today.strftime('%Y%m%d')}",
+                system_message="""You are a business analyst for an educational institute. Analyze the branch data and provide strategic insights.
+
+Your response MUST be valid JSON with this structure:
+{
+  "trainer_analysis": {
+    "overloaded": ["trainer names with too many students/batches"],
+    "underutilized": ["trainer names with capacity"],
+    "recommendation": "specific action to balance workload"
+  },
+  "income_insights": {
+    "trend": "growing|stable|declining",
+    "top_payment_mode": "Cash/Online/etc",
+    "forecast": "projected trend for next month",
+    "recommendation": "how to improve collections"
+  },
+  "student_insights": {
+    "retention_risk": "low|medium|high",
+    "fee_collection_status": "healthy|needs attention|critical",
+    "recommendation": "specific action for students"
+  },
+  "overall_health": {
+    "score": 1-10,
+    "status": "excellent|good|needs improvement|critical",
+    "top_priority": "most important action to take",
+    "summary": "2-3 sentence branch health summary"
+  }
+}
+
+Be specific and actionable. Use actual numbers from the data.""",
+                model="gpt-4o"
+            )
+            
+            ai_response = await chat.send_message_async(f"Analyze this branch data and provide insights:\n\n{analytics_summary}")
+            
+            # Parse AI response
+            try:
+                ai_text = ai_response.strip()
+                if ai_text.startswith("```"):
+                    ai_text = ai_text.split("```")[1]
+                    if ai_text.startswith("json"):
+                        ai_text = ai_text[4:]
+                ai_analysis = json.loads(ai_text)
+            except json.JSONDecodeError:
+                ai_analysis = {"raw_response": ai_response}
+                
+        except Exception as e:
+            logger.error(f"AI analysis failed: {e}")
+            ai_analysis = None
+    
+    return {
+        "generated_at": today.isoformat(),
+        "trainer_workload": trainer_workload,
+        "income": {
+            "this_month": this_month_income,
+            "last_month": last_month_income,
+            "growth_percent": round(income_growth, 1),
+            "by_payment_mode": income_by_mode
+        },
+        "students": {
+            "active": active_students,
+            "completed": completed_students,
+            "fee_efficiency_percent": fee_efficiency,
+            "pending_fees": total_pending
+        },
+        "leads": {
+            "total": total_leads,
+            "converted": converted_leads,
+            "conversion_rate": conversion_rate
+        },
+        "ai_analysis": ai_analysis,
+        "ai_powered": ai_analysis is not None
+    }
+
+
 # Analytics
 @api_router.get("/analytics/overview")
 async def get_analytics_overview(current_user: User = Depends(get_current_user)):
