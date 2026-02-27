@@ -411,6 +411,9 @@ const LeadsPage = () => {
                   Source
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
@@ -419,7 +422,9 @@ const LeadsPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {filteredLeads.map((lead) => (
+              {filteredLeads
+                .slice((currentPage - 1) * leadsPerPage, currentPage * leadsPerPage)
+                .map((lead) => (
                 <tr
                   key={lead.id}
                   className="hover:bg-slate-50 transition-colors"
