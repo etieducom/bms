@@ -646,8 +646,8 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Income & Expense Chart - Admin and FDE */}
-      {(user.role === 'Admin' || user.role === 'Front Desk Executive') && financialData && (
+      {/* Income & Expense Chart - Admin, Branch Admin, and FDE */}
+      {(user.role === 'Admin' || user.role === 'Branch Admin' || user.role === 'Front Desk Executive') && financialData && (
         <Card className="border-slate-200 shadow-soft" data-testid="financial-chart">
           <CardHeader>
             <div className="flex justify-between items-center">
