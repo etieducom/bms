@@ -65,23 +65,25 @@ const Layout = ({ children }) => {
     { icon: BookOpen, label: 'Quiz Exams', path: '/quiz-exams', show: isSuperAdmin || isFDE },
     // 10. Tasks - For Branch Admin, Counsellor and FDE
     { icon: CheckSquare, label: 'Tasks', path: '/tasks', show: isBranchAdmin || isCounsellor || isFDE },
-    // 11. Analytics - NOT for Certificate Manager
-    { icon: BarChart3, label: 'Analytics', path: '/analytics', show: !isCertManager },
-    // 12. Reports - NOT for Certificate Manager
-    { icon: FileText, label: 'Reports', path: '/reports', show: !isCertManager },
-    // 13. Resources - NOT for Certificate Manager
-    { icon: Folder, label: 'Resources', path: '/resources', show: !isCertManager },
+    // 11. Analytics - NOT for Certificate Manager or Trainer
+    { icon: BarChart3, label: 'Analytics', path: '/analytics', show: !isCertManager && !isTrainer },
+    // 12. Reports - NOT for Certificate Manager or Trainer
+    { icon: FileText, label: 'Reports', path: '/reports', show: !isCertManager && !isTrainer },
+    // 13. Resources - NOT for Certificate Manager or Trainer
+    { icon: Folder, label: 'Resources', path: '/resources', show: !isCertManager && !isTrainer },
     // --- Additional items below the main navigation ---
     // Pending Follow-ups - For Counsellors and Branch Admins only
-    { icon: Bell, label: 'Pending Follow-ups', path: '/followups', show: isCounsellor || isBranchAdmin, badge: pendingCount },
+    { icon: Bell, label: 'Pending Follow-ups', path: '/followups', show: isCounsellor || isBranchAdmin },
     // Expenses - For Branch Admin and FDE
     { icon: Wallet, label: 'Expenses', path: '/expenses', show: isBranchAdmin || isFDE },
     // Deleted Leads - For Super Admin and Branch Admin
     { icon: Trash2, label: 'Deleted Leads', path: '/deleted-leads', show: isSuperAdmin || isBranchAdmin },
-    // Schools/Colleges Outreach - For all roles except Certificate Manager
-    { icon: Building2, label: 'Schools/Colleges', path: '/organizations', show: !isCertManager },
+    // Schools/Colleges Outreach - For all roles except Certificate Manager or Trainer
+    { icon: Building2, label: 'Schools/Colleges', path: '/organizations', show: !isCertManager && !isTrainer },
     // Batch Management - For Branch Admin, Super Admin, Front Desk, Counsellor
     { icon: UsersRound, label: 'Batches', path: '/batches', show: isBranchAdmin || isSuperAdmin || isFDE || isCounsellor },
+    // Curriculum Management - For Super Admin only
+    { icon: BookOpen, label: 'Curriculum', path: '/curriculum', show: isSuperAdmin },
     // Certificates - For Super Admin
     { icon: Award, label: 'Certificates', path: '/certificates', show: isSuperAdmin },
     // Admin Panel - For Super Admin and Branch Admin (Branch Admin only sees limited tabs)
@@ -89,6 +91,8 @@ const Layout = ({ children }) => {
     // Certificate Manager sees only these two tabs
     { icon: FileText, label: 'Certificate Requests', path: '/certificates', show: isCertManager },
     { icon: Award, label: 'Ready Certificates', path: '/certificates?status=Ready', show: isCertManager },
+    // Trainer Dashboard - For Trainers only
+    { icon: GraduationCap, label: 'My Dashboard', path: '/trainer', show: isTrainer },
   ].filter(item => item.show);
 
   const handleLogout = () => {
