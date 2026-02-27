@@ -4139,8 +4139,8 @@ async def update_curriculum(curriculum_id: str, data: CurriculumCreate, current_
     return {"message": "Curriculum updated successfully"}
 
 @api_router.delete("/curricula/{curriculum_id}")
-async def delete_curriculum(curriculum_id: str, current_user: User = Depends(require_role([UserRole.ADMIN]))):
-    """Delete curriculum - Admin only"""
+async def delete_curriculum(curriculum_id: str, current_user: User = Depends(require_role([UserRole.ACADEMIC_CONTROLLER]))):
+    """Delete curriculum - Academic Controller only"""
     result = await db.curricula.delete_one({"id": curriculum_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Curriculum not found")
