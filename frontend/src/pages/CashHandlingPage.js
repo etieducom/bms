@@ -95,14 +95,20 @@ const CashHandlingPage = () => {
     
     setSubmitting(true);
     try {
-      await cashHandlingAPI.submit({
+      const params = {
         deposit_receipt_url: depositReceiptUrl || null,
         remarks: remarks || null
-      });
+      };
+      // Add manual total if entered
+      if (manualTotal && parseFloat(manualTotal) > 0) {
+        params.manual_total = parseFloat(manualTotal);
+      }
+      await cashHandlingAPI.submit(params);
       toast.success('Cash handling record submitted successfully');
       setSubmitDialog(false);
       setDepositReceiptUrl('');
       setRemarks('');
+      setManualTotal('');
       fetchTodayCash();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to submit record');
