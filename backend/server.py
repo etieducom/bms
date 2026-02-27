@@ -4075,8 +4075,8 @@ async def get_student_attendance(enrollment_id: str, current_user: User = Depend
 
 # ========== CURRICULUM MANAGEMENT ==========
 @api_router.post("/curricula")
-async def create_curriculum(curriculum: CurriculumCreate, current_user: User = Depends(require_role([UserRole.ADMIN]))):
-    """Create curriculum for a program - Admin only"""
+async def create_curriculum(curriculum: CurriculumCreate, current_user: User = Depends(require_role([UserRole.ACADEMIC_CONTROLLER]))):
+    """Create curriculum for a program - Academic Controller only"""
     program = await db.programs.find_one({"id": curriculum.program_id}, {"_id": 0})
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
