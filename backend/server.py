@@ -506,6 +506,41 @@ class CourseCompletion(BaseModel):
     certificate_issued: bool = False
     remarks: Optional[str] = None
 
+# Student Feedback Model
+class StudentFeedback(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    enrollment_id: str
+    student_name: str
+    student_phone: Optional[str] = None
+    program_name: Optional[str] = None
+    branch_id: str
+    month: str  # YYYY-MM format
+    doubt_clearance: int = 0  # Rating 1-5
+    teacher_behavior: int = 0  # Rating 1-5
+    facilities: int = 0  # Rating 1-5
+    overall_rating: int = 0  # Rating 1-5
+    remarks: Optional[str] = None
+    collected_by: str  # Counsellor ID
+    collected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class StudentFeedbackCreate(BaseModel):
+    enrollment_id: str
+    doubt_clearance: int
+    teacher_behavior: int
+    facilities: int
+    overall_rating: int
+    remarks: Optional[str] = None
+
+# Feedback List Model (auto-generated monthly)
+class FeedbackList(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    month: str  # YYYY-MM format
+    branch_id: str
+    students: List[dict] = []  # List of {enrollment_id, student_name, program_name, feedback_status}
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 # Fixed Batch Timings (auto-created for trainers)
 FIXED_BATCH_TIMINGS = [
     {"slot": 1, "name": "Batch 1", "timing": "9:00 AM to 10:30 AM"},
