@@ -243,7 +243,7 @@ const QuizExamsPage = () => {
           >
             <Eye className="w-4 h-4 mr-1" /> Attempts
           </Button>
-          {isAdmin && (
+          {canCreateQuiz && (
             <>
               <Button
                 size="sm"
@@ -274,7 +274,7 @@ const QuizExamsPage = () => {
           <h1 className="text-4xl font-bold tracking-tight mb-2">Quiz Exams</h1>
           <p className="text-slate-600">Create and manage MCQ-based quiz exams</p>
         </div>
-        {isAdmin && (
+        {canCreateQuiz && (
           <Button
             onClick={() => { resetForm(); setCreateDialog(true); }}
             className="bg-slate-900 hover:bg-slate-800"
@@ -317,7 +317,7 @@ const QuizExamsPage = () => {
       ) : quizzes.length === 0 ? (
         <Card className="border-slate-200">
           <CardContent className="py-12 text-center text-slate-500">
-            No quiz exams created yet. {isAdmin && 'Click "Create Quiz" to get started.'}
+            No quiz exams created yet. {canCreateQuiz && 'Click "Create Quiz" to get started.'}
           </CardContent>
         </Card>
       ) : (
