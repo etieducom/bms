@@ -25,6 +25,10 @@ const StudentsPage = () => {
   const [cancelDialog, setCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const studentsPerPage = 10;
+  
   // Payment dialog state
   const [paymentDialog, setPaymentDialog] = useState(false);
   const [paymentPlan, setPaymentPlan] = useState(null);
