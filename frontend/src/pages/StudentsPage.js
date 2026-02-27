@@ -66,7 +66,7 @@ const StudentsPage = () => {
   // Create Payment Plan dialog
   const [createPlanDialog, setCreatePlanDialog] = useState(false);
   const [planForm, setPlanForm] = useState({
-    plan_type: 'full',
+    plan_type: 'One-time',
     installments_count: 2,
     installments: []
   });
