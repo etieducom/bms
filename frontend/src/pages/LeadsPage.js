@@ -452,6 +452,11 @@ const LeadsPage = () => {
                     <p className="text-sm text-slate-900">{lead.lead_source}</p>
                   </td>
                   <td className="px-6 py-4">
+                    <p className="text-sm text-slate-900">
+                      {lead.lead_date || (lead.created_at ? lead.created_at.split('T')[0] : 'N/A')}
+                    </p>
+                  </td>
+                  <td className="px-6 py-4">
                     {lead.status === 'Converted' ? (
                       // Converted leads are locked - show status as badge only
                       <div
