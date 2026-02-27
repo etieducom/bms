@@ -9,93 +9,90 @@ ETI Educom requires a comprehensive institute management system with:
 - Batch & Trainer management
 - AI Analytics for lead insights
 - WhatsApp automations for reminders
-- **NEW: Counsellor Incentive System for International Exams**
+- Counsellor Incentive System for International Exams
+- **NEW: Campaign Management for Branch Admin**
 
-## User Personas
-1. **Super Admin**: Full access to all branches and system settings
-2. **Branch Admin**: Full access to their branch, financial stats, trainer management, incentive oversight
-3. **Counsellor**: Lead management, follow-ups, conversions, **earns 10% incentive on international exams**
-4. **Front Desk Executive (FDE)**: Enrollments, payments, student management
-5. **Certificate Manager**: Certificate requests and processing
-6. **Trainer**: Batch management, attendance, course completion
-7. **Academic Controller**: Quiz exam creation and curriculum management
+## User Personas & Permissions
 
-## Core Features Implemented
+### 1. Super Admin
+- Full access to all branches and system settings
 
-### Session: December 2024 - Role-Based Access & Financial Stats
+### 2. Branch Admin
+- Full access to their branch
+- Financial stats (Collection, Pending, Revenue, Exam Revenue, Expenses, Net)
+- Campaign Management (create, edit, delete campaigns with analytics)
+- Counsellor incentive oversight
+- Can edit all student details
 
-#### Completed Features
+### 3. Counsellor
+- Lead management, follow-ups, conversions
+- Earns 10% incentive on international exams
+- **Reports**: Leads reports only
 
-**1. Trainer Role Restrictions**
-- Sidebar shows only "My Dashboard" and "Curriculum"
-- Auto-redirect to `/trainer` on login
-- Fixed-time batches auto-created for new trainers
+### 4. Front Desk Executive (FDE)
+- Enrollments, payments, student management
+- Can edit student details EXCEPT name, phone, financial info
+- **Reports**: Leads, Income, Enrollments, Pending Payments (NO expenses)
+- **Dashboard**: NO Income & Expense chart
 
-**2. Academic Controller Role**
-- Sidebar shows only "Quiz Exams" and "Curriculum"
-- Auto-redirect to `/curriculum` on login
-- Restricted quiz exam creation
+### 5. Certificate Manager
+- Certificate requests and processing only
 
-**3. Branch Admin Financial Stats**
-- Financial Overview with 6 metrics (Collection, Pending, Revenue, Exam Revenue, Expenses, Net)
-- Trainer-wise Student Count
-- Monthly Income & Expenses chart
+### 6. Trainer
+- Batch management, attendance, course completion
+- Sidebar: Only "My Dashboard" and "Curriculum"
 
-**4. AI-Powered Analytics (MOCKED)**
-- Health score, insights, and recommendations
-- Note: Uses pre-calculated analytics
+### 7. Academic Controller
+- Quiz exam creation and curriculum management
+- Sidebar: Only "Quiz Exams" and "Curriculum"
 
-**5. Counsellor Incentive System (NEW)**
-- **10% incentive on international exam fees when status = "Completed"**
-- Counsellor Dashboard shows:
-  - Earned Incentive (completed exams)
-  - Pending Incentive (booked but not completed)
-  - Cancelled/Refunds (cancelled exams)
-  - Recent earned bookings list
-  - Pending bookings list
-- Branch Admin Dashboard shows:
-  - Total earned/pending incentives
-  - Completed/cancelled exam counts
-  - Counsellor-wise breakdown table
-- Manage Exams page shows:
-  - Incentive/Refund column
-  - Refund status for cancelled exams
-  - "Mark Refunded" button for Branch Admin
+## Features Implemented
 
-**6. Lead Form Enhancements**
-- "Lead Date" field
-- "Discount Amount (₹)" field
+### Session: December 2024
 
-**7. Aadhar Card Upload Enhancement**
-- Multiple files support (images and PDF)
+#### Bug Fixes (P0)
+- ✅ **Exam Revenue Bug**: Fixed field name (amount → exam_price) - Now shows ₹4,000 correctly
+- ✅ **Academic Controller Quiz Creation**: Fixed permission check - Now shows "Create Quiz" button
+
+#### Features (P1)
+- ✅ **Removed Analytics Tab**: No longer in sidebar (was showing nothing)
+- ✅ **Campaign Management**: New page for Branch Admin
+  - Create/Edit/Delete campaigns (Google/Meta/etc.)
+  - Fields: Campaign Name, Platform, Link, Start/End Date, Spend, Leads, Messages
+  - Campaign Analytics: Leads acquired, Cost per lead, Conversion rate, ROI indicator
+- ✅ **Edit Student in Students Tab**: 
+  - Edit button with photo upload
+  - FDE restricted from editing name/phone/financial info
+- ✅ **Reports Access Control**:
+  - Counsellor: Leads reports only
+  - FDE: Leads, Enrollments, Income, Pending Payments
+  - Branch Admin: All reports
+- ✅ **FDE Dashboard Restriction**: Income & Expense chart hidden
+
+#### Previously Implemented
+- Trainer role restrictions (sidebar: My Dashboard + Curriculum)
+- Academic Controller role (Quiz Exams + Curriculum creation)
+- Branch Admin Financial Stats (6 metrics + trainer-wise breakdown)
+- AI-Powered Lead Insights (MOCKED)
+- Counsellor Incentive System (10% on international exams)
+- Lead form enhancements (Lead Date, Discount Amount)
+- Multiple Aadhar document upload
 
 ## Architecture
 
 ### Backend (FastAPI)
-- Single monolithic `server.py` (5800+ lines - NEEDS REFACTORING)
-- MongoDB for data storage
-- JWT authentication
+- `server.py` (6000+ lines - NEEDS REFACTORING)
 - Key new endpoints:
-  - `/api/counsellor/incentives` - Counsellor's incentive data
-  - `/api/branch-admin/incentive-stats` - Branch-wide incentive stats
-  - `/api/exam-bookings/{id}/refund` - Mark refund as processed
+  - `/api/campaigns` - CRUD for campaigns
+  - `/api/campaigns/{id}/analytics` - Campaign analytics
+  - `/api/students/{id}/update` - Update student with FDE restrictions
 
 ### Frontend (React)
-- Role-based routing in `App.js`
-- Role-based sidebar in `Layout.js`
-- Updated pages:
-  - `Dashboard.js` - Counsellor & Branch Admin incentive sections
-  - `ManageExamsPage.js` - Incentive/Refund column
-
-## Database Schema
-
-### Updated Collections
-- `exam_bookings`:
-  - Added: `counsellor_incentive` (float) - 10% of exam_price
-  - Added: `incentive_status` (string) - Pending/Earned/Cancelled
-  - Added: `refund_status` (string) - None/Pending/Processed
-  - Added: `refund_amount` (float)
-  - Added: `completed_at`, `cancelled_at` timestamps
+- Key pages:
+  - `CampaignManagement.js` - NEW
+  - `StudentsPage.js` - Enhanced with Edit dialog
+  - `ReportsPage.js` - Role-based filtering
+  - `Dashboard.js` - FDE chart restriction
 
 ## Test Credentials
 | Role | Email | Password |
@@ -105,18 +102,25 @@ ETI Educom requires a comprehensive institute management system with:
 | Trainer | trainer@etieducom.com | password |
 | Academic Controller | academic@etieducom.com | password |
 | Counsellor | counsellor@etieducom.com | password |
+| FDE | fde@etieducom.com | password |
 
-## Technical Debt (High Priority)
-1. **Refactor `server.py`** - Split into modular API routers
+## Technical Debt (HIGH PRIORITY)
+1. **Refactor `server.py`** - Split into modular API routers (6000+ lines)
 2. **Refactor `AdminPanel.js`** - Break into role-specific components
 3. **Refactor `Layout.js`** - Simplify role-based logic
 
-## Remaining P2 Tasks
+## Remaining Tasks
+
+### P2 (Next)
 1. Trainer Attendance & Course Completion functionality
 2. Report Data Fixes
 3. Single consolidated Payment Receipt
-4. WhatsApp Fee Reminders Automation
-5. Birthday Wishes Automation
+4. Public certificate request link
+
+### Backlog
+- WhatsApp Fee Reminders Automation (7,5,3,1 days)
+- Birthday Wishes Automation
+- Real LLM integration for AI Insights
 
 ## Known Issues
 - AI Insights uses MOCKED data (not real LLM)
