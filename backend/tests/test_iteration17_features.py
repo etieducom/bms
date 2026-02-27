@@ -34,37 +34,44 @@ def api_client():
 @pytest.fixture(scope="module")
 def fde_token(api_client):
     """Get FDE authentication token"""
-    response = api_client.post(
+    # Use form data for OAuth2 password flow
+    session = requests.Session()
+    response = session.post(
         f"{BASE_URL}/api/auth/login",
-        data={"username": FDE_EMAIL, "password": FDE_PASSWORD}
+        data={"username": FDE_EMAIL, "password": FDE_PASSWORD},
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
     if response.status_code == 200:
         return response.json().get("access_token")
-    pytest.skip(f"FDE authentication failed - Status: {response.status_code}")
+    pytest.skip(f"FDE authentication failed - Status: {response.status_code}, Response: {response.text}")
 
 
 @pytest.fixture(scope="module")
 def branch_admin_token(api_client):
     """Get Branch Admin authentication token"""
-    response = api_client.post(
+    session = requests.Session()
+    response = session.post(
         f"{BASE_URL}/api/auth/login",
-        data={"username": BRANCH_ADMIN_EMAIL, "password": BRANCH_ADMIN_PASSWORD}
+        data={"username": BRANCH_ADMIN_EMAIL, "password": BRANCH_ADMIN_PASSWORD},
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
     if response.status_code == 200:
         return response.json().get("access_token")
-    pytest.skip(f"Branch Admin authentication failed - Status: {response.status_code}")
+    pytest.skip(f"Branch Admin authentication failed - Status: {response.status_code}, Response: {response.text}")
 
 
 @pytest.fixture(scope="module")
 def counsellor_token(api_client):
     """Get Counsellor authentication token"""
-    response = api_client.post(
+    session = requests.Session()
+    response = session.post(
         f"{BASE_URL}/api/auth/login",
-        data={"username": COUNSELLOR_EMAIL, "password": COUNSELLOR_PASSWORD}
+        data={"username": COUNSELLOR_EMAIL, "password": COUNSELLOR_PASSWORD},
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
     if response.status_code == 200:
         return response.json().get("access_token")
-    pytest.skip(f"Counsellor authentication failed - Status: {response.status_code}")
+    pytest.skip(f"Counsellor authentication failed - Status: {response.status_code}, Response: {response.text}")
 
 
 # ============ AUTHENTICATION TESTS ============
@@ -74,9 +81,11 @@ class TestAuthentication:
 
     def test_fde_login(self, api_client):
         """Test FDE can login successfully"""
-        response = api_client.post(
+        session = requests.Session()
+        response = session.post(
             f"{BASE_URL}/api/auth/login",
-            data={"username": FDE_EMAIL, "password": FDE_PASSWORD}
+            data={"username": FDE_EMAIL, "password": FDE_PASSWORD},
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
         assert response.status_code == 200, f"FDE login failed: {response.text}"
         data = response.json()
@@ -86,9 +95,11 @@ class TestAuthentication:
 
     def test_branch_admin_login(self, api_client):
         """Test Branch Admin can login successfully"""
-        response = api_client.post(
+        session = requests.Session()
+        response = session.post(
             f"{BASE_URL}/api/auth/login",
-            data={"username": BRANCH_ADMIN_EMAIL, "password": BRANCH_ADMIN_PASSWORD}
+            data={"username": BRANCH_ADMIN_EMAIL, "password": BRANCH_ADMIN_PASSWORD},
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
         assert response.status_code == 200, f"Branch Admin login failed: {response.text}"
         data = response.json()
@@ -98,9 +109,11 @@ class TestAuthentication:
 
     def test_counsellor_login(self, api_client):
         """Test Counsellor can login successfully"""
-        response = api_client.post(
+        session = requests.Session()
+        response = session.post(
             f"{BASE_URL}/api/auth/login",
-            data={"username": COUNSELLOR_EMAIL, "password": COUNSELLOR_PASSWORD}
+            data={"username": COUNSELLOR_EMAIL, "password": COUNSELLOR_PASSWORD},
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
         assert response.status_code == 200, f"Counsellor login failed: {response.text}"
         data = response.json()
