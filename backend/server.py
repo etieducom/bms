@@ -2141,6 +2141,99 @@ async def get_ai_leads_insights(current_user: User = Depends(get_current_user)):
     if lost_this_month > converted_this_month:
         recommendations.append(f"Lost {lost_this_month} leads this month vs {converted_this_month} conversions. Review lost lead feedback.")
     
+    # Calculate health score (rule-based)
+    health_score = min(100, max(0, 
+        50 + 
+        (conversion_rate - 20) * 2 +
+        (10 if overdue_followups == 0 else -10) +
+        (10 if new_leads < total_leads * 0.3 else -5)
+    ))
+    
+    # Try to get AI-powered insights using real LLM
+    ai_insights = None
+    ai_recommendations = None
+    
+    if LLM_AVAILABLE and os.environ.get('EMERGENT_LLM_KEY'):
+        try:
+            # Prepare data summary for LLM
+            lead_data_summary = f"""
+Lead Management Data Summary:
+- Total Leads: {total_leads}
+- Leads This Week: {leads_this_week}
+- Leads This Month: {leads_this_month}
+- Overall Conversion Rate: {conversion_rate}%
+- Monthly Conversion Rate: {monthly_conversion_rate}%
+- Pending Follow-ups: {pending_followups}
+- Overdue Follow-ups: {overdue_followups}
+- Best Performing Source: {best_source}
+- Most Popular Program: {popular_program}
+
+Status Breakdown: {json.dumps(status_counts)}
+Lead Sources: {json.dumps(source_counts)}
+Programs: {json.dumps(program_counts)}
+
+New Leads: {new_leads} ({round(new_leads/total_leads*100) if total_leads > 0 else 0}% of total)
+Converted This Month: {converted_this_month}
+Lost This Month: {lost_this_month}
+"""
+            
+            # Initialize LLM Chat
+            chat = LlmChat(
+                api_key=os.environ.get('EMERGENT_LLM_KEY'),
+                session_id=f"ai-insights-{current_user.id}-{datetime.now().strftime('%Y%m%d')}",
+                system_message="""You are an expert CRM analyst and sales coach. Analyze the lead management data and provide actionable insights.
+
+Your response MUST be valid JSON with this exact structure:
+{
+  "insights": [
+    {"type": "warning|success|alert|info", "title": "Short Title", "message": "Detailed insight message", "priority": "high|medium|low"}
+  ],
+  "recommendations": ["Specific actionable recommendation 1", "Recommendation 2", "Recommendation 3"],
+  "summary": "One sentence summary of the overall lead health"
+}
+
+Provide 3-5 insights and 3-4 recommendations. Focus on:
+1. Conversion rate analysis and benchmarks
+2. Follow-up effectiveness
+3. Lead source ROI
+4. Actionable improvements
+5. Trends and patterns"""
+            ).with_model("openai", "gpt-4o")
+            
+            # Send message to LLM
+            user_message = UserMessage(text=f"Analyze this lead data and provide insights:\n\n{lead_data_summary}")
+            response = await chat.send_message(user_message)
+            
+            # Parse LLM response
+            try:
+                # Try to extract JSON from response
+                response_text = response.strip()
+                if response_text.startswith("```json"):
+                    response_text = response_text[7:]
+                if response_text.startswith("```"):
+                    response_text = response_text[3:]
+                if response_text.endswith("```"):
+                    response_text = response_text[:-3]
+                
+                ai_response = json.loads(response_text.strip())
+                ai_insights = ai_response.get('insights', [])
+                ai_recommendations = ai_response.get('recommendations', [])
+                logging.info(f"AI Insights generated successfully for user {current_user.email}")
+            except json.JSONDecodeError as e:
+                logging.warning(f"Failed to parse LLM response as JSON: {e}")
+                # Fall back to rule-based
+                ai_insights = None
+                ai_recommendations = None
+        except Exception as e:
+            logging.error(f"LLM API error: {e}")
+            # Fall back to rule-based insights
+            ai_insights = None
+            ai_recommendations = None
+    
+    # Use AI insights if available, otherwise use rule-based
+    final_insights = ai_insights if ai_insights else insights
+    final_recommendations = ai_recommendations if ai_recommendations else recommendations
+    
     return {
         "summary": {
             "total_leads": total_leads,
@@ -2156,14 +2249,10 @@ async def get_ai_leads_insights(current_user: User = Depends(get_current_user)):
         "status_breakdown": status_counts,
         "source_breakdown": source_counts,
         "program_breakdown": program_counts,
-        "insights": insights,
-        "recommendations": recommendations,
-        "health_score": min(100, max(0, 
-            50 + 
-            (conversion_rate - 20) * 2 +  # Bonus for good conversion
-            (10 if overdue_followups == 0 else -10) +  # Penalty for overdue
-            (10 if new_leads < total_leads * 0.3 else -5)  # Bonus for touching leads
-        ))
+        "insights": final_insights,
+        "recommendations": final_recommendations,
+        "health_score": health_score,
+        "ai_powered": ai_insights is not None
     }
 
 
