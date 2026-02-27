@@ -4997,6 +4997,143 @@ async def get_campaign_analytics(campaign_id: str, current_user: User = Depends(
         }
     }
 
+# ========== CASH HANDLING ==========
+
+@api_router.get("/cash-handling/today")
+async def get_today_cash(current_user: User = Depends(get_current_user)):
+    """Get today's cash total for FDE"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_ADMIN, UserRole.FDE]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    branch_filter = {}
+    if current_user.role in [UserRole.BRANCH_ADMIN, UserRole.FDE]:
+        branch_filter["branch_id"] = current_user.branch_id
+    
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    
+    # Get all cash payments for today
+    cash_payments = await db.payments.find(
+        {**branch_filter, "payment_mode": "Cash", "payment_date": today},
+        {"_id": 0, "amount": 1, "student_name": 1, "payment_date": 1}
+    ).to_list(1000)
+    
+    total_cash = sum(p.get('amount', 0) for p in cash_payments)
+    
+    # Check if there's an existing cash handling record for today
+    existing_record = await db.cash_handling.find_one(
+        {**branch_filter, "date": today},
+        {"_id": 0}
+    )
+    
+    return {
+        "date": today,
+        "total_cash": total_cash,
+        "payments": cash_payments,
+        "record": existing_record
+    }
+
+@api_router.post("/cash-handling/submit")
+async def submit_cash_handling(
+    deposit_receipt_url: Optional[str] = None,
+    remarks: Optional[str] = None,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.FDE]))
+):
+    """Submit cash handling record with deposit receipt or remarks"""
+    branch_id = current_user.branch_id
+    if not branch_id and current_user.role == UserRole.ADMIN:
+        first_branch = await db.branches.find_one({}, {"_id": 0, "id": 1})
+        branch_id = first_branch['id'] if first_branch else None
+    
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    
+    # Get total cash for today
+    cash_payments = await db.payments.find(
+        {"branch_id": branch_id, "payment_mode": "Cash", "payment_date": today},
+        {"_id": 0, "amount": 1}
+    ).to_list(1000)
+    total_cash = sum(p.get('amount', 0) for p in cash_payments)
+    
+    # Check existing record
+    existing = await db.cash_handling.find_one({"branch_id": branch_id, "date": today})
+    
+    if existing:
+        # Update existing record
+        await db.cash_handling.update_one(
+            {"branch_id": branch_id, "date": today},
+            {"$set": {
+                "deposit_receipt_url": deposit_receipt_url,
+                "remarks": remarks,
+                "status": "Deposited" if deposit_receipt_url else "Pending",
+                "submitted_by": current_user.id,
+                "submitted_at": datetime.now(timezone.utc),
+                "total_cash": total_cash
+            }}
+        )
+    else:
+        # Create new record
+        cash_record = CashHandling(
+            date=today,
+            branch_id=branch_id,
+            total_cash=total_cash,
+            deposit_receipt_url=deposit_receipt_url,
+            remarks=remarks,
+            status="Deposited" if deposit_receipt_url else "Pending",
+            submitted_by=current_user.id,
+            submitted_at=datetime.now(timezone.utc)
+        )
+        await db.cash_handling.insert_one(cash_record.model_dump())
+    
+    return {"message": "Cash handling record submitted successfully"}
+
+@api_router.get("/cash-handling/history")
+async def get_cash_handling_history(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))
+):
+    """Get cash handling history for Branch Admin"""
+    branch_filter = {}
+    if current_user.role == UserRole.BRANCH_ADMIN:
+        branch_filter["branch_id"] = current_user.branch_id
+    
+    date_filter = {}
+    if start_date:
+        date_filter["$gte"] = start_date
+    if end_date:
+        date_filter["$lte"] = end_date
+    
+    query = {**branch_filter}
+    if date_filter:
+        query["date"] = date_filter
+    
+    records = await db.cash_handling.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    
+    # Also get days with cash payments but no record
+    all_cash_payments = await db.payments.aggregate([
+        {"$match": {**branch_filter, "payment_mode": "Cash"}},
+        {"$group": {
+            "_id": "$payment_date",
+            "total": {"$sum": "$amount"}
+        }}
+    ]).to_list(1000)
+    
+    # Merge with records
+    record_dates = {r['date'] for r in records}
+    for payment_day in all_cash_payments:
+        if payment_day['_id'] and payment_day['_id'] not in record_dates:
+            records.append({
+                "date": payment_day['_id'],
+                "total_cash": payment_day['total'],
+                "status": "Pending",
+                "deposit_receipt_url": None,
+                "remarks": None
+            })
+    
+    # Sort by date descending
+    records.sort(key=lambda x: x.get('date', ''), reverse=True)
+    
+    return records
+
 # ========== PAYMENT PLAN EDIT (Branch Admin) ==========
 @api_router.put("/payment-plans/{plan_id}/edit")
 async def edit_payment_plan(plan_id: str, edit_data: PaymentPlanEdit, current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))):
