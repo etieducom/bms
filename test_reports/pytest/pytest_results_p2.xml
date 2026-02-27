@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="17" time="28.227" timestamp="2026-02-27T08:25:07.382294+00:00" hostname="agent-env-93ad3548-a4d4-4728-a367-348a664be623"><testcase classname="backend.tests.test_p2_features.TestAuthentication" name="test_trainer_login" time="1.343" /><testcase classname="backend.tests.test_p2_features.TestAuthentication" name="test_branch_admin_login" time="1.149" /><testcase classname="backend.tests.test_p2_features.TestTrainerDashboard" name="test_trainer_dashboard_loads" time="1.662" /><testcase classname="backend.tests.test_p2_features.TestTrainerDashboard" name="test_trainer_batches_endpoint" time="1.622" /><testcase classname="backend.tests.test_p2_features.TestTrainerDashboard" name="test_non_trainer_cannot_access_dashboard" time="2.520" /><testcase classname="backend.tests.test_p2_features.TestAttendanceAPI" name="test_attendance_bulk_endpoint_exists" time="2.306" /><testcase classname="backend.tests.test_p2_features.TestAttendanceAPI" name="test_single_attendance_endpoint" time="2.377" /><testcase classname="backend.tests.test_p2_features.TestAttendanceAPI" name="test_get_batch_attendance" time="2.515"><failure message="AssertionError: Failed to get batch attendance: {&quot;detail&quot;:&quot;Not Found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_p2_features.py:199: in test_get_batch_attendance
+    assert response.status_code == 200, f"Failed to get batch attendance: {response.text}"
+E   AssertionError: Failed to get batch attendance: {"detail":"Not Found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_p2_features.TestCourseCompletionAPI" name="test_course_completion_endpoint_exists" time="1.653" /><testcase classname="backend.tests.test_p2_features.TestCourseCompletionAPI" name="test_get_course_completions" time="1.635" /><testcase classname="backend.tests.test_p2_features.TestPaymentModel" name="test_payments_have_student_name_and_program_name" time="1.807" /><testcase classname="backend.tests.test_p2_features.TestPaymentModel" name="test_reports_income_with_student_names" time="1.679" /><testcase classname="backend.tests.test_p2_features.TestPublicCertificateRequest" name="test_public_enrollment_lookup_endpoint" time="0.681" /><testcase classname="backend.tests.test_p2_features.TestPublicCertificateRequest" name="test_public_certificate_request_endpoint" time="0.989" /><testcase classname="backend.tests.test_p2_features.TestPublicCertificateRequest" name="test_public_certificate_verify_endpoint" time="0.730" /><testcase classname="backend.tests.test_p2_features.TestReportsWithStudentNames" name="test_pending_payments_report_has_student_names" time="1.839" /><testcase classname="backend.tests.test_p2_features.TestReportsWithStudentNames" name="test_leads_report" time="1.607"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_p2_features.py:377: in test_leads_report
+    data = response.json()
+           ^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase></testsuite></testsuites>
