@@ -25,15 +25,20 @@ import CertificateManagementPage from '@/pages/CertificateManagementPage';
 import CertificateVerifyPage from '@/pages/CertificateVerifyPage';
 import OrganizationsPage from '@/pages/OrganizationsPage';
 import BatchManagementPage from '@/pages/BatchManagementPage';
+import TrainerDashboard from '@/pages/TrainerDashboard';
+import CurriculumPage from '@/pages/CurriculumPage';
 import Layout from '@/components/Layout';
 import ActivityTracker from '@/components/ActivityTracker';
 import { Toaster } from '@/components/ui/sonner';
 
-const PrivateRoute = ({ children, adminOnly = false, fdaOnly = false, branchAdminAllowed = false, certManagerAllowed = false, adminPanelAccess = false }) => {
+const PrivateRoute = ({ children, adminOnly = false, fdaOnly = false, branchAdminAllowed = false, certManagerAllowed = false, adminPanelAccess = false, trainerOnly = false }) => {
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   
   if (!token) return <Navigate to="/login" />;
+  
+  // Trainer-only routes
+  if (trainerOnly && user.role !== 'Trainer') return <Navigate to="/" />;
   
   // Admin-only routes (Super Admin only)
   if (adminOnly && user.role !== 'Admin') return <Navigate to="/" />;
