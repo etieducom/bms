@@ -1481,6 +1481,7 @@ const AdminPanel = () => {
                         <SelectItem value="Front Desk Executive">Front Desk Executive</SelectItem>
                         <SelectItem value="Trainer">Trainer</SelectItem>
                         <SelectItem value="Certificate Manager">Certificate Manager</SelectItem>
+                        <SelectItem value="Academic Controller">Academic Controller</SelectItem>
                       </>
                     ) : (
                       <SelectItem value="Trainer">Trainer</SelectItem>
