@@ -67,11 +67,9 @@ const Layout = ({ children }) => {
     { icon: BookOpen, label: 'Quiz Exams', path: '/quiz-exams', show: isAcademicController || isFDE },
     // 10. Tasks - For Branch Admin, Counsellor and FDE
     { icon: CheckSquare, label: 'Tasks', path: '/tasks', show: isBranchAdmin || isCounsellor || isFDE },
-    // 11. Analytics - NOT for Certificate Manager, Trainer, or Academic Controller
-    { icon: BarChart3, label: 'Analytics', path: '/analytics', show: !isCertManager && !isTrainer && !isAcademicController },
-    // 12. Reports - NOT for Certificate Manager, Trainer, or Academic Controller
-    { icon: FileText, label: 'Reports', path: '/reports', show: !isCertManager && !isTrainer && !isAcademicController },
-    // 13. Resources - NOT for Certificate Manager, Trainer, or Academic Controller
+    // 11. Reports - Access controlled per role (Counsellor: leads, FDE: income/student/leads, Branch Admin: all)
+    { icon: FileText, label: 'Reports', path: '/reports', show: isBranchAdmin || isCounsellor || isFDE },
+    // 12. Resources - NOT for Certificate Manager, Trainer, or Academic Controller
     { icon: Folder, label: 'Resources', path: '/resources', show: !isCertManager && !isTrainer && !isAcademicController },
     // --- Additional items below the main navigation ---
     // Pending Follow-ups - For Counsellors and Branch Admins only
