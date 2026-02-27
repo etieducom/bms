@@ -4524,6 +4524,120 @@ async def get_branch_financial_stats(current_user: User = Depends(get_current_us
         "total_trainers": len(trainers)
     }
 
+# ========== CAMPAIGN MANAGEMENT ==========
+
+@api_router.post("/campaigns")
+async def create_campaign(campaign: CampaignCreate, current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))):
+    """Create a new marketing campaign - Branch Admin only"""
+    branch_id = current_user.branch_id
+    if current_user.role == UserRole.ADMIN:
+        # For super admin, use first branch or require selection
+        first_branch = await db.branches.find_one({}, {"_id": 0, "id": 1})
+        branch_id = first_branch['id'] if first_branch else None
+    
+    campaign_data = Campaign(
+        **campaign.model_dump(),
+        branch_id=branch_id,
+        created_by=current_user.id
+    )
+    
+    await db.campaigns.insert_one(campaign_data.model_dump())
+    return {"message": "Campaign created successfully", "id": campaign_data.id}
+
+@api_router.get("/campaigns")
+async def get_campaigns(current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))):
+    """Get all campaigns for the branch"""
+    query = {}
+    if current_user.role == UserRole.BRANCH_ADMIN:
+        query["branch_id"] = current_user.branch_id
+    
+    campaigns = await db.campaigns.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return campaigns
+
+@api_router.put("/campaigns/{campaign_id}")
+async def update_campaign(campaign_id: str, data: CampaignCreate, current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))):
+    """Update a campaign"""
+    campaign = await db.campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    if current_user.role == UserRole.BRANCH_ADMIN and campaign.get('branch_id') != current_user.branch_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    await db.campaigns.update_one({"id": campaign_id}, {"$set": data.model_dump()})
+    return {"message": "Campaign updated successfully"}
+
+@api_router.delete("/campaigns/{campaign_id}")
+async def delete_campaign(campaign_id: str, current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))):
+    """Delete a campaign"""
+    campaign = await db.campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    if current_user.role == UserRole.BRANCH_ADMIN and campaign.get('branch_id') != current_user.branch_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    await db.campaigns.delete_one({"id": campaign_id})
+    return {"message": "Campaign deleted successfully"}
+
+@api_router.get("/campaigns/{campaign_id}/analytics")
+async def get_campaign_analytics(campaign_id: str, current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))):
+    """Get analytics for a specific campaign"""
+    campaign = await db.campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    if current_user.role == UserRole.BRANCH_ADMIN and campaign.get('branch_id') != current_user.branch_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    start_date = campaign.get('start_date')
+    end_date = campaign.get('end_date')
+    branch_id = campaign.get('branch_id')
+    
+    # Get leads during campaign period
+    leads_query = {
+        "branch_id": branch_id,
+        "created_at": {
+            "$gte": datetime.fromisoformat(start_date) if start_date else datetime.min,
+            "$lte": datetime.fromisoformat(end_date) if end_date else datetime.max
+        }
+    }
+    leads = await db.leads.find(leads_query, {"_id": 0, "status": 1}).to_list(10000)
+    
+    total_leads_acquired = len(leads)
+    converted_leads = len([l for l in leads if l.get('status') == 'Converted'])
+    conversion_rate = (converted_leads / total_leads_acquired * 100) if total_leads_acquired > 0 else 0
+    
+    total_spend = campaign.get('total_spend', 0)
+    cost_per_lead = (total_spend / total_leads_acquired) if total_leads_acquired > 0 else 0
+    cost_per_conversion = (total_spend / converted_leads) if converted_leads > 0 else 0
+    
+    # Lead source breakdown (if source matches platform)
+    platform = campaign.get('platform', '').lower()
+    leads_from_platform = len([l for l in leads if platform in l.get('source', '').lower()])
+    
+    return {
+        "campaign": campaign,
+        "analytics": {
+            "total_leads_acquired": total_leads_acquired,
+            "leads_from_platform": leads_from_platform,
+            "converted_leads": converted_leads,
+            "conversion_rate": round(conversion_rate, 2),
+            "total_spend": total_spend,
+            "cost_per_lead": round(cost_per_lead, 2),
+            "cost_per_conversion": round(cost_per_conversion, 2),
+            "roi_indicator": "Positive" if conversion_rate > 10 else "Needs Improvement"
+        },
+        "lead_status_breakdown": {
+            "new": len([l for l in leads if l.get('status') == 'New']),
+            "contacted": len([l for l in leads if l.get('status') == 'Contacted']),
+            "demo_booked": len([l for l in leads if l.get('status') == 'Demo Booked']),
+            "follow_up": len([l for l in leads if l.get('status') == 'Follow-up']),
+            "converted": converted_leads,
+            "lost": len([l for l in leads if l.get('status') == 'Lost'])
+        }
+    }
+
 # ========== PAYMENT PLAN EDIT (Branch Admin) ==========
 @api_router.put("/payment-plans/{plan_id}/edit")
 async def edit_payment_plan(plan_id: str, edit_data: PaymentPlanEdit, current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))):
