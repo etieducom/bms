@@ -4246,12 +4246,16 @@ async def get_trainer_dashboard(current_user: User = Depends(get_current_user)):
         {"_id": 0}
     ).to_list(1000)
     
-    # Get curriculum for programs trainer is teaching
+    # Get curriculum for programs trainer is teaching (or all if no programs assigned)
     program_ids = list(set(b['program_id'] for b in batches if b.get('program_id')))
-    curricula = await db.curricula.find(
-        {"program_id": {"$in": program_ids}},
-        {"_id": 0}
-    ).to_list(100)
+    if program_ids:
+        curricula = await db.curricula.find(
+            {"program_id": {"$in": program_ids}},
+            {"_id": 0}
+        ).to_list(100)
+    else:
+        # Show all curricula if trainer has no programs assigned yet
+        curricula = await db.curricula.find({}, {"_id": 0}).to_list(100)
     
     return {
         "trainer": {
