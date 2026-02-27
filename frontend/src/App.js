@@ -259,7 +259,7 @@ function App() {
           <Route
             path="/curriculum"
             element={
-              <PrivateRoute adminOnly>
+              <PrivateRoute academicControllerOnly>
                 <Layout><CurriculumPage /></Layout>
               </PrivateRoute>
             }
