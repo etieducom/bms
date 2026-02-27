@@ -78,6 +78,8 @@ const Layout = ({ children }) => {
     { icon: MessageSquare, label: 'Student Feedback', path: '/student-feedback', show: isCounsellor || isBranchAdmin },
     // Expenses - For Branch Admin and FDE
     { icon: Wallet, label: 'Expenses', path: '/expenses', show: isBranchAdmin || isFDE },
+    // Cash Handling - For FDE and Branch Admin
+    { icon: Banknote, label: 'Cash Handling', path: '/cash-handling', show: isFDE || isBranchAdmin },
     // Campaign Management - For Branch Admin only
     { icon: Target, label: 'Campaigns', path: '/campaigns', show: isBranchAdmin },
     // Deleted Leads - For Branch Admin only (NOT Super Admin)
