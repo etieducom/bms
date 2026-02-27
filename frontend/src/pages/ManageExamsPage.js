@@ -170,6 +170,7 @@ const ManageExamsPage = () => {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Price</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Exam Date</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Incentive/Refund</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Actions</th>
                 </tr>
               </thead>
@@ -198,20 +199,62 @@ const ManageExamsPage = () => {
                       {getStatusBadge(booking.status)}
                     </td>
                     <td className="px-4 py-3">
-                      <Select
-                        value={booking.status}
-                        onValueChange={(v) => handleStatusChange(booking.id, v)}
-                      >
-                        <SelectTrigger className="w-32 h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Pending">Pending</SelectItem>
-                          <SelectItem value="Confirmed">Confirmed</SelectItem>
-                          <SelectItem value="Completed">Completed</SelectItem>
-                          <SelectItem value="Cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {booking.status === 'Completed' && (
+                        <div className="flex items-center gap-1">
+                          <Gift className="w-3 h-3 text-green-600" />
+                          <span className="text-xs text-green-600 font-medium">
+                            ₹{booking.counsellor_incentive || Math.round(booking.exam_price * 0.10)} earned
+                          </span>
+                        </div>
+                      )}
+                      {booking.status === 'Cancelled' && (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1">
+                            <RefreshCw className="w-3 h-3 text-orange-600" />
+                            <span className="text-xs text-orange-600 font-medium">
+                              ₹{booking.refund_amount || booking.exam_price} refund
+                            </span>
+                          </div>
+                          <Badge className={`text-xs ${booking.refund_status === 'Processed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                            {booking.refund_status || 'Pending'}
+                          </Badge>
+                        </div>
+                      )}
+                      {booking.status === 'Pending' || booking.status === 'Confirmed' ? (
+                        <span className="text-xs text-slate-400">10% on completion</span>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-2">
+                        <Select
+                          value={booking.status}
+                          onValueChange={(v) => handleStatusChange(booking.id, v)}
+                          disabled={booking.status === 'Completed'}
+                        >
+                          <SelectTrigger className="w-32 h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Pending">Pending</SelectItem>
+                            <SelectItem value="Confirmed">Confirmed</SelectItem>
+                            <SelectItem value="Completed">Completed</SelectItem>
+                            <SelectItem value="Cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        {/* Refund action for Branch Admin */}
+                        {isBranchAdmin && booking.status === 'Cancelled' && booking.refund_status !== 'Processed' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMarkRefundProcessed(booking.id)}
+                            className="text-xs h-7"
+                          >
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Mark Refunded
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
