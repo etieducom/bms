@@ -265,6 +265,14 @@ const QuizExamsPage = () => {
           <Button
             size="sm"
             variant="outline"
+            onClick={() => showQRCode(quiz)}
+            data-testid={`qr-code-${quiz.id}`}
+          >
+            <QrCode className="w-4 h-4 mr-1" /> QR Code
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
             onClick={() => viewAttempts(quiz)}
           >
             <Eye className="w-4 h-4 mr-1" /> Attempts
