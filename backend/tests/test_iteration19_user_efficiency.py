@@ -38,9 +38,13 @@ class TestUserEfficiencyAPI:
         return None
     
     def test_health_check(self):
-        """Test that the API is accessible"""
-        # Try a simple GET request
-        response = requests.get(f"{BASE_URL}/api/programs")
+        """Test that the API is accessible by checking login endpoint"""
+        # Try a simple login test to verify API is reachable
+        data = {
+            "username": self.branch_admin_creds["email"],
+            "password": self.branch_admin_creds["password"]
+        }
+        response = requests.post(f"{BASE_URL}/api/auth/login", data=data)
         assert response.status_code == 200
         print("✓ API is accessible")
     
