@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Clock, FileText, Users, Copy, Trash2, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Plus, Clock, FileText, Users, Copy, Trash2, CheckCircle, XCircle, Eye, QrCode, Download } from 'lucide-react';
 import { format } from 'date-fns';
 
 const QuizExamsPage = () => {
