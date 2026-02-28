@@ -336,7 +336,7 @@ const BatchManagementPage = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {trainerStats.map((trainer) => (
-                    <Card key={trainer.trainer_id} className="border-slate-200">
+                    <Card key={trainer.trainer_id} className="border-slate-200 hover:shadow-md transition-shadow">
                       <CardContent className="pt-4">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
@@ -347,16 +347,57 @@ const BatchManagementPage = () => {
                             <p className="text-xs text-slate-500">{trainer.email}</p>
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-center">
+                        
+                        {/* Main Stats */}
+                        <div className="grid grid-cols-2 gap-2 text-center mb-3">
                           <div className="bg-blue-50 rounded-lg p-2">
-                            <p className="text-2xl font-bold text-blue-600">{trainer.unique_student_count}</p>
-                            <p className="text-xs text-slate-600">Students</p>
+                            <p className="text-2xl font-bold text-blue-600">{trainer.total_students || trainer.unique_student_count || 0}</p>
+                            <p className="text-xs text-slate-600">Total Students</p>
                           </div>
                           <div className="bg-green-50 rounded-lg p-2">
-                            <p className="text-2xl font-bold text-green-600">{trainer.active_batches}</p>
-                            <p className="text-xs text-slate-600">Batches</p>
+                            <p className="text-2xl font-bold text-green-600">{trainer.active_batches || 0}</p>
+                            <p className="text-xs text-slate-600">Active Batches</p>
                           </div>
                         </div>
+                        
+                        {/* Detailed Stats */}
+                        <div className="space-y-1 text-sm border-t pt-2">
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Active Students:</span>
+                            <span className="font-medium text-green-600">{trainer.active_students || 0}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Completed:</span>
+                            <span className="font-medium text-slate-600">{trainer.completed_students || 0}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Total Batches:</span>
+                            <span className="font-medium">{trainer.total_batches || 0}</span>
+                          </div>
+                        </div>
+                        
+                        {/* Batch List */}
+                        {trainer.batches && trainer.batches.length > 0 && (
+                          <div className="mt-3 pt-2 border-t">
+                            <p className="text-xs font-medium text-slate-500 mb-2">Batches:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {trainer.batches.slice(0, 4).map((batch, idx) => (
+                                <Badge 
+                                  key={idx} 
+                                  variant={batch.status === 'Active' ? 'default' : 'secondary'}
+                                  className="text-xs"
+                                >
+                                  {batch.name?.split(' - ')[0] || batch.name}
+                                </Badge>
+                              ))}
+                              {trainer.batches.length > 4 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{trainer.batches.length - 4} more
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
