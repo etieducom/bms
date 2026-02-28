@@ -82,6 +82,8 @@ const Layout = ({ children }) => {
     { icon: Banknote, label: 'Cash Handling', path: '/cash-handling', show: isFDE || isBranchAdmin },
     // AI Analytics - For Branch Admin only
     { icon: Brain, label: 'AI Analytics', path: '/ai-analytics', show: isBranchAdmin },
+    // User Efficiency - For Branch Admin only
+    { icon: Zap, label: 'User Efficiency', path: '/user-efficiency', show: isBranchAdmin },
     // Campaign Management - For Branch Admin only
     { icon: Target, label: 'Campaigns', path: '/campaigns', show: isBranchAdmin },
     // Deleted Leads - For Branch Admin only (NOT Super Admin)
