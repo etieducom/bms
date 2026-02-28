@@ -2153,6 +2153,17 @@ async def mark_all_user_notifications_read(current_user: User = Depends(get_curr
     )
     return {"message": "All notifications marked as read"}
 
+@api_router.delete("/notifications/{notification_id}")
+async def delete_notification(notification_id: str, current_user: User = Depends(get_current_user)):
+    """Delete/dismiss a notification"""
+    result = await db.notifications.delete_one({
+        "id": notification_id,
+        "$or": [{"user_id": current_user.id}, {"recipient_ids": current_user.id}]
+    })
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return {"message": "Notification dismissed"}
+
 @api_router.get("/notifications/followup-reminders")
 async def get_followup_reminders(current_user: User = Depends(get_current_user)):
     """Get follow-ups that are due in the next 10 minutes for audio reminders"""
