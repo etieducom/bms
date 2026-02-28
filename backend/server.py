@@ -7423,6 +7423,476 @@ async def send_birthday_wishes():
 # Initialize scheduler
 scheduler = AsyncIOScheduler()
 
+# ========== META/FACEBOOK INTEGRATION ==========
+
+META_GRAPH_API_BASE = "https://graph.facebook.com/v20.0"
+
+@api_router.get("/meta/config/{branch_id}")
+async def get_meta_config(branch_id: str, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """Get Meta configuration for a branch - Super Admin only"""
+    config = await db.meta_configs.find_one({"branch_id": branch_id}, {"_id": 0})
+    if not config:
+        return {"configured": False, "message": "Meta not configured for this branch"}
+    # Hide sensitive data
+    config['app_secret'] = "***hidden***"
+    config['access_token'] = "***hidden***" if config.get('access_token') else None
+    return {"configured": True, "config": config}
+
+@api_router.post("/meta/config")
+async def create_meta_config(config: MetaConfigCreate, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """Create Meta configuration for a branch - Super Admin only"""
+    existing = await db.meta_configs.find_one({"branch_id": config.branch_id})
+    if existing:
+        raise HTTPException(status_code=400, detail="Meta config already exists for this branch. Use PUT to update.")
+    
+    meta_config = MetaConfig(**config.model_dump())
+    config_dict = meta_config.model_dump()
+    config_dict['created_at'] = config_dict['created_at'].isoformat()
+    config_dict['updated_at'] = config_dict['updated_at'].isoformat()
+    
+    await db.meta_configs.insert_one(config_dict)
+    
+    logger.info(f"Meta config created for branch {config.branch_id} by {current_user.email}")
+    return {"message": "Meta configuration saved", "webhook_verify_token": meta_config.webhook_verify_token}
+
+@api_router.put("/meta/config/{branch_id}")
+async def update_meta_config(branch_id: str, update: MetaConfigUpdate, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """Update Meta configuration for a branch - Super Admin only"""
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.meta_configs.update_one(
+        {"branch_id": branch_id},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Meta config not found for this branch")
+    
+    return {"message": "Meta configuration updated"}
+
+@api_router.get("/meta/configs")
+async def list_meta_configs(current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    """List all Meta configurations - Super Admin only"""
+    configs = await db.meta_configs.find({}, {"_id": 0, "app_secret": 0, "access_token": 0}).to_list(100)
+    return configs
+
+# Webhook for Facebook Lead Ads
+@api_router.get("/webhooks/facebook-leads")
+async def verify_facebook_webhook(request: Request):
+    """Verify Facebook webhook - called by Meta during setup"""
+    mode = request.query_params.get("hub.mode")
+    verify_token = request.query_params.get("hub.verify_token")
+    challenge = request.query_params.get("hub.challenge")
+    
+    logger.info(f"Facebook webhook verification: mode={mode}, token={verify_token}")
+    
+    if mode == "subscribe":
+        # Find config with matching verify token
+        config = await db.meta_configs.find_one({"webhook_verify_token": verify_token})
+        if config:
+            logger.info("Facebook webhook verification successful")
+            return PlainTextResponse(challenge)
+    
+    logger.warning("Facebook webhook verification failed")
+    raise HTTPException(status_code=403, detail="Verification failed")
+
+@api_router.post("/webhooks/facebook-leads")
+async def handle_facebook_lead_webhook(request: Request):
+    """Handle incoming lead notifications from Facebook"""
+    body = await request.body()
+    
+    try:
+        payload = json.loads(body)
+        logger.info(f"Facebook webhook received: {json.dumps(payload)[:500]}")
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    
+    # Process lead notifications
+    if payload.get("object") == "page":
+        for entry in payload.get("entry", []):
+            page_id = entry.get("id")
+            
+            # Find branch config for this page
+            config = await db.meta_configs.find_one({
+                "$or": [{"page_id": page_id}, {"page_ids": page_id}],
+                "is_active": True
+            })
+            
+            if not config:
+                logger.warning(f"No config found for page {page_id}")
+                continue
+            
+            branch_id = config['branch_id']
+            
+            for change in entry.get("changes", []):
+                if change.get("field") == "leadgen":
+                    lead_data = change.get("value", {})
+                    leadgen_id = lead_data.get("leadgen_id")
+                    
+                    if leadgen_id:
+                        # Store the lead notification
+                        meta_lead = MetaLead(
+                            branch_id=branch_id,
+                            leadgen_id=leadgen_id,
+                            page_id=page_id,
+                            form_id=lead_data.get("form_id"),
+                            ad_id=lead_data.get("ad_id"),
+                            fb_created_time=str(lead_data.get("created_time"))
+                        )
+                        
+                        lead_dict = meta_lead.model_dump()
+                        lead_dict['created_at'] = lead_dict['created_at'].isoformat()
+                        await db.meta_leads.insert_one(lead_dict)
+                        
+                        # Try to fetch full lead data
+                        try:
+                            await fetch_and_sync_lead(config, meta_lead)
+                        except Exception as e:
+                            logger.error(f"Error fetching lead {leadgen_id}: {e}")
+    
+    return {"status": "ok"}
+
+async def fetch_and_sync_lead(config: dict, meta_lead: MetaLead):
+    """Fetch full lead data from Facebook and create CRM lead"""
+    access_token = config.get('access_token')
+    if not access_token:
+        logger.warning("No access token for fetching lead data")
+        return
+    
+    # Fetch lead data from Graph API
+    url = f"{META_GRAPH_API_BASE}/{meta_lead.leadgen_id}"
+    params = {
+        "access_token": access_token,
+        "fields": "id,created_time,field_data,ad_id,form_id,campaign_id,ad_name,campaign_name"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, params=params)
+        if response.status_code != 200:
+            logger.error(f"Error fetching lead: {response.text}")
+            return
+        
+        lead_data = response.json()
+    
+    # Parse field data
+    field_data = {}
+    name = None
+    email = None
+    phone = None
+    
+    for field in lead_data.get("field_data", []):
+        field_name = field.get("name", "").lower()
+        values = field.get("values", [])
+        value = values[0] if values else None
+        field_data[field_name] = value
+        
+        if "name" in field_name or "full_name" in field_name:
+            name = value
+        elif "email" in field_name:
+            email = value
+        elif "phone" in field_name or "mobile" in field_name:
+            phone = value
+    
+    # Update meta lead with parsed data
+    await db.meta_leads.update_one(
+        {"id": meta_lead.id},
+        {"$set": {
+            "name": name,
+            "email": email,
+            "phone": phone,
+            "field_data": field_data,
+            "campaign_id": lead_data.get("campaign_id"),
+            "campaign_name": lead_data.get("campaign_name"),
+            "ad_name": lead_data.get("ad_name")
+        }}
+    )
+    
+    # Create CRM lead if we have enough data
+    if name and (email or phone):
+        # Get default program for the branch
+        branch = await db.branches.find_one({"id": config['branch_id']}, {"_id": 0})
+        programs = await db.programs.find({}, {"_id": 0, "id": 1}).to_list(1)
+        default_program_id = programs[0]['id'] if programs else None
+        
+        if default_program_id:
+            crm_lead = Lead(
+                name=name,
+                email=email or f"{phone}@facebook.lead",
+                number=phone or "",
+                program_id=default_program_id,
+                lead_source="Facebook Lead Ad",
+                status="New",
+                branch_id=config['branch_id'],
+                meta_lead_id=meta_lead.id,
+                meta_campaign=lead_data.get("campaign_name"),
+                meta_ad=lead_data.get("ad_name")
+            )
+            
+            lead_dict = crm_lead.model_dump()
+            lead_dict['created_at'] = lead_dict['created_at'].isoformat()
+            await db.leads.insert_one(lead_dict)
+            
+            # Update meta lead with CRM link
+            await db.meta_leads.update_one(
+                {"id": meta_lead.id},
+                {"$set": {"crm_lead_id": crm_lead.id, "is_synced_to_crm": True}}
+            )
+            
+            logger.info(f"Created CRM lead {crm_lead.id} from Facebook lead {meta_lead.leadgen_id}")
+
+@api_router.get("/meta/leads")
+async def get_meta_leads(
+    branch_id: Optional[str] = None,
+    synced: Optional[bool] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get Facebook leads - Branch Admin sees their branch only"""
+    query = {}
+    
+    if current_user.role == UserRole.BRANCH_ADMIN:
+        query["branch_id"] = current_user.branch_id
+    elif branch_id:
+        query["branch_id"] = branch_id
+    
+    if synced is not None:
+        query["is_synced_to_crm"] = synced
+    
+    leads = await db.meta_leads.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return leads
+
+@api_router.post("/meta/sync-ads/{branch_id}")
+async def sync_ads_data(branch_id: str, current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.BRANCH_ADMIN]))):
+    """Manually sync ads data from Facebook - fetches last 30 days"""
+    config = await db.meta_configs.find_one({"branch_id": branch_id, "is_active": True})
+    if not config:
+        raise HTTPException(status_code=404, detail="Meta not configured for this branch")
+    
+    if not config.get('access_token') or not config.get('ad_account_id'):
+        raise HTTPException(status_code=400, detail="Access token and Ad Account ID required for ads sync")
+    
+    access_token = config['access_token']
+    ad_account_id = config['ad_account_id']
+    
+    # Fetch last 30 days of data
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=30)
+    
+    url = f"{META_GRAPH_API_BASE}/{ad_account_id}/insights"
+    params = {
+        "access_token": access_token,
+        "fields": "account_name,campaign_id,campaign_name,impressions,reach,clicks,spend,cpc,cpm,ctr,actions",
+        "time_range": json.dumps({
+            "since": start_date.strftime('%Y-%m-%d'),
+            "until": end_date.strftime('%Y-%m-%d')
+        }),
+        "level": "campaign",
+        "time_increment": 1  # Daily breakdown
+    }
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, params=params)
+        if response.status_code != 200:
+            logger.error(f"Error fetching ads insights: {response.text}")
+            raise HTTPException(status_code=400, detail=f"Facebook API error: {response.text[:200]}")
+        
+        data = response.json()
+    
+    # Store insights
+    insights_count = 0
+    for insight in data.get("data", []):
+        ad_insight = MetaAdInsight(
+            branch_id=branch_id,
+            date=insight.get("date_start", ""),
+            account_id=ad_account_id,
+            campaign_id=insight.get("campaign_id"),
+            campaign_name=insight.get("campaign_name"),
+            impressions=int(insight.get("impressions", 0)),
+            reach=int(insight.get("reach", 0)),
+            clicks=int(insight.get("clicks", 0)),
+            spend=float(insight.get("spend", 0)),
+            cpc=float(insight.get("cpc", 0)),
+            cpm=float(insight.get("cpm", 0)),
+            ctr=float(insight.get("ctr", 0)),
+            level="campaign"
+        )
+        
+        # Upsert - update if exists, insert if not
+        await db.meta_ad_insights.update_one(
+            {"branch_id": branch_id, "date": ad_insight.date, "campaign_id": ad_insight.campaign_id},
+            {"$set": ad_insight.model_dump()},
+            upsert=True
+        )
+        insights_count += 1
+    
+    # Update last sync time
+    await db.meta_configs.update_one(
+        {"branch_id": branch_id},
+        {"$set": {"last_sync_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": f"Synced {insights_count} insights records", "period": f"{start_date.date()} to {end_date.date()}"}
+
+@api_router.get("/meta/analytics/{branch_id}")
+async def get_meta_analytics(
+    branch_id: str,
+    days: int = 30,
+    current_user: User = Depends(get_current_user)
+):
+    """Get Meta ads analytics for branch - with AI analysis"""
+    # Check access
+    if current_user.role == UserRole.BRANCH_ADMIN and current_user.branch_id != branch_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=days)
+    
+    # Get insights data
+    insights = await db.meta_ad_insights.find({
+        "branch_id": branch_id,
+        "date": {"$gte": start_date.strftime('%Y-%m-%d'), "$lte": end_date.strftime('%Y-%m-%d')}
+    }, {"_id": 0}).sort("date", -1).to_list(1000)
+    
+    # Get meta leads for this branch in the same period
+    meta_leads = await db.meta_leads.find({
+        "branch_id": branch_id,
+        "created_at": {"$gte": start_date.isoformat()}
+    }, {"_id": 0}).to_list(1000)
+    
+    # Get CRM leads from Facebook source
+    crm_leads = await db.leads.find({
+        "branch_id": branch_id,
+        "lead_source": "Facebook Lead Ad",
+        "created_at": {"$gte": start_date.isoformat()}
+    }, {"_id": 0}).to_list(1000)
+    
+    # Calculate aggregates
+    total_spend = sum(i.get('spend', 0) for i in insights)
+    total_impressions = sum(i.get('impressions', 0) for i in insights)
+    total_reach = sum(i.get('reach', 0) for i in insights)
+    total_clicks = sum(i.get('clicks', 0) for i in insights)
+    total_leads = len(meta_leads)
+    converted_leads = len([l for l in crm_leads if l.get('status') == 'Converted'])
+    
+    # Cost per lead
+    cost_per_lead = total_spend / total_leads if total_leads > 0 else 0
+    
+    # Campaign breakdown
+    campaign_stats = {}
+    for insight in insights:
+        campaign = insight.get('campaign_name', 'Unknown')
+        if campaign not in campaign_stats:
+            campaign_stats[campaign] = {
+                'spend': 0, 'impressions': 0, 'clicks': 0, 'leads': 0
+            }
+        campaign_stats[campaign]['spend'] += insight.get('spend', 0)
+        campaign_stats[campaign]['impressions'] += insight.get('impressions', 0)
+        campaign_stats[campaign]['clicks'] += insight.get('clicks', 0)
+    
+    # Count leads per campaign
+    for lead in meta_leads:
+        campaign = lead.get('campaign_name', 'Unknown')
+        if campaign in campaign_stats:
+            campaign_stats[campaign]['leads'] += 1
+    
+    # Daily trend
+    daily_data = {}
+    for insight in insights:
+        date = insight.get('date')
+        if date not in daily_data:
+            daily_data[date] = {'spend': 0, 'impressions': 0, 'clicks': 0, 'leads': 0}
+        daily_data[date]['spend'] += insight.get('spend', 0)
+        daily_data[date]['impressions'] += insight.get('impressions', 0)
+        daily_data[date]['clicks'] += insight.get('clicks', 0)
+    
+    for lead in meta_leads:
+        date = lead.get('created_at', '')[:10]
+        if date in daily_data:
+            daily_data[date]['leads'] += 1
+    
+    # AI Analysis
+    ai_analysis = None
+    if LLM_AVAILABLE and os.environ.get('EMERGENT_LLM_KEY'):
+        try:
+            analytics_summary = f"""
+Facebook Ads Analytics for Branch (Last {days} days):
+
+OVERALL METRICS:
+- Total Spend: ${total_spend:.2f}
+- Total Impressions: {total_impressions:,}
+- Total Reach: {total_reach:,}
+- Total Clicks: {total_clicks:,}
+- CTR: {(total_clicks/total_impressions*100) if total_impressions > 0 else 0:.2f}%
+- Total Leads from Facebook: {total_leads}
+- Converted Leads: {converted_leads}
+- Cost Per Lead: ${cost_per_lead:.2f}
+- Conversion Rate: {(converted_leads/total_leads*100) if total_leads > 0 else 0:.1f}%
+
+CAMPAIGN BREAKDOWN:
+{json.dumps(campaign_stats, indent=2)}
+
+DAILY TREND (Last 7 days):
+{json.dumps(dict(list(daily_data.items())[:7]), indent=2)}
+"""
+            
+            chat = LlmChat(
+                api_key=os.environ.get('EMERGENT_LLM_KEY'),
+                session_id=f"meta-analytics-{branch_id}-{datetime.now().strftime('%Y%m%d')}",
+                system_message="""You are a digital marketing analyst specializing in Facebook/Meta ads. Analyze the provided data and give actionable insights.
+
+Your response MUST be valid JSON:
+{
+  "performance_summary": "2-3 sentence summary of overall performance",
+  "top_campaign": {"name": "campaign name", "reason": "why it's best"},
+  "underperforming": {"name": "campaign name", "issue": "what's wrong"},
+  "spend_efficiency": "excellent|good|average|poor",
+  "recommendations": [
+    "specific recommendation 1",
+    "specific recommendation 2",
+    "specific recommendation 3"
+  ],
+  "trend_insight": "observation about daily/weekly trend",
+  "roi_assessment": "assessment of return on ad spend"
+}
+
+Be specific, data-driven, and actionable.""",
+                model="gpt-4o"
+            )
+            
+            ai_response = await chat.send_message_async(f"Analyze this Facebook Ads data:\n\n{analytics_summary}")
+            
+            try:
+                ai_text = ai_response.strip()
+                if ai_text.startswith("```"):
+                    ai_text = ai_text.split("```")[1]
+                    if ai_text.startswith("json"):
+                        ai_text = ai_text[4:]
+                ai_analysis = json.loads(ai_text)
+            except json.JSONDecodeError:
+                ai_analysis = {"raw_response": ai_response}
+                
+        except Exception as e:
+            logger.error(f"Meta analytics AI analysis failed: {e}")
+    
+    return {
+        "period": {"start": start_date.strftime('%Y-%m-%d'), "end": end_date.strftime('%Y-%m-%d')},
+        "summary": {
+            "total_spend": round(total_spend, 2),
+            "total_impressions": total_impressions,
+            "total_reach": total_reach,
+            "total_clicks": total_clicks,
+            "ctr": round((total_clicks/total_impressions*100) if total_impressions > 0 else 0, 2),
+            "total_leads": total_leads,
+            "converted_leads": converted_leads,
+            "cost_per_lead": round(cost_per_lead, 2),
+            "conversion_rate": round((converted_leads/total_leads*100) if total_leads > 0 else 0, 1)
+        },
+        "campaigns": campaign_stats,
+        "daily_trend": daily_data,
+        "ai_analysis": ai_analysis,
+        "ai_powered": ai_analysis is not None
+    }
+
 # ========== ADMIN RESET ENDPOINT ==========
 @api_router.post("/admin/reset-system")
 async def reset_system(current_user: User = Depends(require_role([UserRole.ADMIN]))):
