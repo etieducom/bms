@@ -36,11 +36,14 @@ import Layout from '@/components/Layout';
 import ActivityTracker from '@/components/ActivityTracker';
 import { Toaster } from '@/components/ui/sonner';
 
-const PrivateRoute = ({ children, adminOnly = false, fdaOnly = false, branchAdminAllowed = false, certManagerAllowed = false, adminPanelAccess = false, trainerOnly = false, academicControllerOnly = false }) => {
+const PrivateRoute = ({ children, adminOnly = false, fdaOnly = false, branchAdminAllowed = false, certManagerAllowed = false, adminPanelAccess = false, trainerOnly = false, academicControllerOnly = false, branchAdminOnly = false }) => {
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   
   if (!token) return <Navigate to="/login" />;
+  
+  // Branch Admin only routes (e.g., AI Analytics, User Efficiency)
+  if (branchAdminOnly && user.role !== 'Branch Admin' && user.role !== 'Admin') return <Navigate to="/" />;
   
   // Trainer-only routes
   if (trainerOnly && user.role !== 'Trainer') return <Navigate to="/" />;
