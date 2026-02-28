@@ -6337,6 +6337,45 @@ async def delete_quiz_exam(exam_id: str, current_user: User = Depends(require_ro
         raise HTTPException(status_code=404, detail="Quiz exam not found")
     return {"message": "Quiz exam deleted successfully"}
 
+@api_router.get("/quiz-exams/{exam_id}/qr-code")
+async def get_quiz_qr_code(exam_id: str, current_user: User = Depends(get_current_user)):
+    """Generate QR code for quiz link"""
+    exam = await db.quiz_exams.find_one({"id": exam_id}, {"_id": 0, "name": 1})
+    if not exam:
+        raise HTTPException(status_code=404, detail="Quiz exam not found")
+    
+    # Generate the public quiz URL
+    # Use the frontend URL from environment or construct it
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://cash-handling-test.preview.emergentagent.com')
+    quiz_url = f"{frontend_url}/public/quiz/{exam_id}"
+    
+    # Generate QR code
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(quiz_url)
+    qr.make(fit=True)
+    
+    # Create image
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Save to bytes
+    img_bytes = io.BytesIO()
+    img.save(img_bytes, format='PNG')
+    img_bytes.seek(0)
+    
+    # Return as base64 for easy embedding in frontend
+    img_base64 = base64.b64encode(img_bytes.read()).decode('utf-8')
+    
+    return {
+        "exam_name": exam['name'],
+        "quiz_url": quiz_url,
+        "qr_code_base64": f"data:image/png;base64,{img_base64}"
+    }
+
 # Public endpoints for students to take exams
 @api_router.get("/public/quiz/{exam_id}")
 async def get_public_quiz(exam_id: str):
