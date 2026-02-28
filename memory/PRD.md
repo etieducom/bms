@@ -1,10 +1,26 @@
 # ETI Educom Branch Management System - PRD
 
-## Status: ✅ ALL REQUIREMENTS COMPLETE (Feb 27, 2026)
+## Status: ✅ ALL REQUIREMENTS COMPLETE (Feb 28, 2026)
 
-## Latest Updates (Feb 27, 2026 - Session 2)
+## Latest Updates (Feb 28, 2026 - Session 3)
 
-### New Features Added:
+### New Features/Enhancements Added:
+- ✅ **Task Management System**: Counsellors can assign tasks to Trainers/FDEs, Branch Admins can assign to all roles
+- ✅ **Trainer Stats Display**: Enhanced Batches page shows detailed trainer stats (total students, active batches, completed students, batch list)
+- ✅ **Student Birthdays for Trainers**: Birthday column in Trainer Dashboard Students tab, upcoming birthdays section
+- ✅ **Attendance Restriction**: Past date attendance can only be edited, not created new (frontend date picker restricted)
+- ✅ **Fee Check for Certificates**: Certificate requests automatically blocked if student has pending fees
+
+### Bug Fixes:
+- ✅ Fixed Lead Status Update - now updates immediately without needing second click (removed setTimeout hack)
+- ✅ Fixed notification program field - uses program_name instead of program
+- ✅ Removed duplicate Task models and endpoints in backend
+
+---
+
+## Previous Session Updates (Feb 27, 2026 - Session 2)
+
+### Features Added:
 - ✅ **Cash Handling System**: FDE uploads bank deposit receipt, Branch Admin views history
 - ✅ **AI Analytics Dashboard**: Trainer workload, income analysis, student insights, AI recommendations
 - ✅ **Follow-up Reminders**: Audio notification 10 minutes before scheduled follow-up
@@ -34,6 +50,7 @@
 | Cash Handling System | ✅ |
 | AI Analytics Dashboard | ✅ |
 | Notification System | ✅ |
+| Task Management System | ✅ |
 
 ### AI & Automation
 | Feature | Status |
@@ -51,12 +68,17 @@
 
 ## API Endpoints
 
-### New Endpoints:
+### New/Updated Endpoints:
 - `GET /api/analytics/ai-branch-insights` - AI-powered branch analytics
 - `GET /api/cash-handling/today` - Today's cash for FDE
 - `POST /api/cash-handling/submit` - Submit deposit record
 - `GET /api/cash-handling/history` - History for Branch Admin
 - `GET /api/notifications/followup-reminders` - Follow-ups due in 10 min
+- `GET /api/tasks` - Get tasks assigned to/by current user
+- `POST /api/tasks` - Create a new task (Branch Admin/Counsellor)
+- `PUT /api/tasks/{task_id}/status` - Update task status
+- `GET /api/trainer-stats` - Get trainer statistics for Branch Admin
+- `POST /api/public/certificate-requests` - Now checks for pending fees
 
 ---
 
@@ -89,6 +111,17 @@ Key steps:
 
 ---
 
+## Upcoming/Future Tasks
+- **P1**: AI-Based User Efficiency Analysis dashboard
+- **P1**: Audio notifications for upcoming follow-ups & converted leads (frontend polling)
+- **P2**: QR code generation for quiz links
+- **P2**: Branch Admin attendance insights (missed attendance by trainers)
+- **P2**: Make "Completed" student status non-editable
+- **P3**: Refactor StudentsPage.js (1800+ lines) into smaller components
+- **P3**: Move new routes from server.py to separate route files
+
+---
+
 ## File Structure
 ```
 /app/
@@ -99,8 +132,12 @@ Key steps:
 ├── frontend/
 │   ├── src/
 │   │   ├── pages/
-│   │   │   ├── AIAnalyticsPage.js    # NEW
-│   │   │   ├── CashHandlingPage.js   # NEW
+│   │   │   ├── AIAnalyticsPage.js
+│   │   │   ├── CashHandlingPage.js
+│   │   │   ├── TasksPage.js
+│   │   │   ├── TrainerDashboard.js    # Birthday column added
+│   │   │   ├── BatchManagementPage.js # Trainer Stats enhanced
+│   │   │   ├── LeadsPage.js           # Status update fixed
 │   │   │   └── ...
 │   │   └── api/api.js
 ├── DEPLOYMENT_GUIDE_HOSTINGER.md
