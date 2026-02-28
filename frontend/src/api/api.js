@@ -342,4 +342,17 @@ export const cashHandlingAPI = {
   getHistory: (params) => api.get('/cash-handling/history', { params }),
 };
 
+// Meta (Facebook/Instagram) Integration API
+export const metaAPI = {
+  // Super Admin - Config Management
+  getConfig: (branchId) => api.get(`/meta/config/${branchId}`),
+  getAllConfigs: () => api.get('/meta/configs'),
+  createConfig: (data) => api.post('/meta/config', data),
+  updateConfig: (branchId, data) => api.put(`/meta/config/${branchId}`, data),
+  // Analytics & Leads
+  getAnalytics: (branchId, days = 30) => api.get(`/meta/analytics/${branchId}`, { params: { days } }),
+  getLeads: (params = {}) => api.get('/meta/leads', { params }),
+  syncAds: (branchId) => api.post(`/meta/sync-ads/${branchId}`),
+};
+
 export default api;
