@@ -352,6 +352,7 @@ export const metaAPI = {
   // Analytics & Leads
   getAnalytics: (branchId, days = 30) => api.get(`/meta/analytics/${branchId}`, { params: { days } }),
   getLeads: (params = {}) => api.get('/meta/leads', { params }),
+  getCampaigns: (branchId) => api.get(`/meta/campaigns/${branchId}`),
   syncAds: (branchId) => api.post(`/meta/sync-ads/${branchId}`),
 };
 
