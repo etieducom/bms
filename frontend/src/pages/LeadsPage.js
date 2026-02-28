@@ -258,10 +258,12 @@ const LeadsPage = () => {
     
     try {
       await leadsAPI.update(leadId, { status: newStatus });
-      toast.success('Status updated! WhatsApp message sent.');
-      fetchLeads();
+      toast.success('Status updated!');
+      // Small delay to ensure database is updated before fetching
+      setTimeout(() => fetchLeads(), 500);
     } catch (error) {
-      toast.error('Failed to update status');
+      console.error('Status update error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to update status');
     }
   };
 
