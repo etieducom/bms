@@ -588,6 +588,49 @@ const QuizExamsPage = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* QR Code Dialog */}
+      <Dialog open={qrCodeDialog} onOpenChange={setQrCodeDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="w-5 h-5" />
+              Quiz QR Code
+            </DialogTitle>
+          </DialogHeader>
+          
+          {qrCodeData && (
+            <div className="text-center space-y-4">
+              <p className="text-slate-600 font-medium">{qrCodeData.examName}</p>
+              
+              <div className="flex justify-center">
+                <img 
+                  src={qrCodeData.qrCode} 
+                  alt="Quiz QR Code" 
+                  className="w-64 h-64 border rounded-lg shadow-sm"
+                />
+              </div>
+              
+              <p className="text-xs text-slate-500 break-all px-4">{qrCodeData.url}</p>
+              
+              <div className="flex gap-2 justify-center">
+                <Button onClick={downloadQRCode} className="bg-slate-900 hover:bg-slate-800">
+                  <Download className="w-4 h-4 mr-2" /> Download QR
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    navigator.clipboard.writeText(qrCodeData.url);
+                    toast.success('Link copied!');
+                  }}
+                >
+                  <Copy className="w-4 h-4 mr-2" /> Copy Link
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
