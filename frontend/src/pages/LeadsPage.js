@@ -161,12 +161,8 @@ const LeadsPage = () => {
       });
     }
 
-    // Sort by date (most recent first)
-    filtered.sort((a, b) => {
-      const dateA = a.lead_date || a.created_at || '';
-      const dateB = b.lead_date || b.created_at || '';
-      return dateB.localeCompare(dateA);
-    });
+    // Backend already returns data sorted by date (latest first)
+    // No additional frontend sorting needed
 
     setFilteredLeads(filtered);
     setCurrentPage(1); // Reset to first page when filters change

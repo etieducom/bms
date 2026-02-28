@@ -724,12 +724,9 @@ const StudentsPage = () => {
     if (dateTo && enrollmentDate > dateTo) return false;
     
     return true;
-  }).sort((a, b) => {
-    // Sort by enrollment date descending (most recent first)
-    const dateA = a.enrollment_date || a.created_at || '';
-    const dateB = b.enrollment_date || b.created_at || '';
-    return dateB.localeCompare(dateA);
   });
+  // Backend already returns data sorted by enrollment_date (latest first)
+  // No additional frontend sorting needed
   
   // Paginated students
   const paginatedStudents = filteredStudents.slice(
