@@ -22,6 +22,7 @@ import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 import json
+import qrcode
 
 # LLM Integration for AI Insights
 try:
