@@ -154,9 +154,33 @@ const QuizExamsPage = () => {
   };
 
   const copyExamLink = (examId) => {
-    const link = `${window.location.origin}/exam/${examId}`;
+    const link = `${window.location.origin}/public/quiz/${examId}`;
     navigator.clipboard.writeText(link);
-    toast.success('Exam link copied to clipboard!');
+    toast.success('Quiz link copied to clipboard!');
+  };
+
+  const showQRCode = async (quiz) => {
+    try {
+      const response = await quizAPI.getQRCode(quiz.id);
+      setQrCodeData({
+        examName: quiz.name,
+        url: response.data.quiz_url,
+        qrCode: response.data.qr_code_base64
+      });
+      setQrCodeDialog(true);
+    } catch (error) {
+      toast.error('Failed to generate QR code');
+    }
+  };
+
+  const downloadQRCode = () => {
+    if (!qrCodeData?.qrCode) return;
+    
+    const link = document.createElement('a');
+    link.href = qrCodeData.qrCode;
+    link.download = `quiz-qr-${qrCodeData.examName.replace(/\s+/g, '-')}.png`;
+    link.click();
+    toast.success('QR code downloaded!');
   };
 
   const openEdit = async (quiz) => {
