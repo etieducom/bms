@@ -5544,16 +5544,19 @@ async def mark_course_completion(
     comp_dict['marked_at'] = comp_dict['marked_at'].isoformat()
     await db.course_completions.insert_one(comp_dict)
     
-    # Update enrollment status
+    # Update enrollment status and remove from batch
     await db.enrollments.update_one(
         {"id": enrollment_id},
-        {"$set": {"status": "Completed", "course_completion_date": completion.completion_date}}
+        {"$set": {
+            "status": "Completed", 
+            "course_completion_date": completion.completion_date,
+            "batch_id": None  # Remove from batch so they don't appear in attendance
+        }}
     )
     
     # Remove student from batch assignment (they've completed the course)
-    await db.student_batch_assignments.delete_one({
-        "enrollment_id": enrollment_id,
-        "trainer_id": current_user.id
+    await db.student_batch_assignments.delete_many({
+        "enrollment_id": enrollment_id
     })
     
     return {"message": "Course marked as complete", "completion_id": completion.id}
