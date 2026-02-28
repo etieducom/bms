@@ -275,6 +275,33 @@ const TrainerDashboard = () => {
 
         {/* Students Tab */}
         <TabsContent value="students" className="space-y-4">
+          {/* Upcoming Birthdays Section */}
+          {dashboard?.upcoming_birthdays?.length > 0 && (
+            <Card className="border-pink-200 bg-pink-50/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2 text-pink-700">
+                  <Cake className="w-5 h-5" />
+                  Upcoming Birthdays
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-3">
+                  {dashboard.upcoming_birthdays.map((b, idx) => (
+                    <div key={idx} className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-pink-200 shadow-sm">
+                      <Cake className="w-4 h-4 text-pink-500" />
+                      <div>
+                        <p className="font-medium text-sm">{b.student_name}</p>
+                        <p className="text-xs text-slate-500">
+                          {b.days_until === 0 ? '🎉 Today!' : `${b.days_until} day${b.days_until > 1 ? 's' : ''} - ${new Date(b.birthday).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardContent className="pt-6">
               <table className="w-full">
@@ -283,36 +310,55 @@ const TrainerDashboard = () => {
                     <th className="px-4 py-2 text-left text-sm font-semibold">Name</th>
                     <th className="px-4 py-2 text-left text-sm font-semibold">Contact</th>
                     <th className="px-4 py-2 text-left text-sm font-semibold">Program</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold">Birthday</th>
                     <th className="px-4 py-2 text-left text-sm font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {dashboard?.students?.map((student) => (
-                    <tr key={student.id} className="border-b hover:bg-slate-50">
-                      <td className="px-4 py-3">
-                        <p className="font-medium">{student.student_name}</p>
-                        <p className="text-xs text-slate-500">{student.email}</p>
-                      </td>
-                      <td className="px-4 py-3 text-sm">{student.phone}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline">{student.program_name}</Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openCompletionDialog(student)}
-                          data-testid={`mark-complete-${student.id}`}
-                        >
-                          <Award className="w-4 h-4 mr-1" />
-                          Mark Complete
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                  {dashboard?.students?.map((student) => {
+                    // Check if this student has an upcoming birthday
+                    const upcomingBday = dashboard?.upcoming_birthdays?.find(b => b.enrollment_id === student.id);
+                    return (
+                      <tr key={student.id} className="border-b hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          <p className="font-medium">{student.student_name}</p>
+                          <p className="text-xs text-slate-500">{student.email}</p>
+                        </td>
+                        <td className="px-4 py-3 text-sm">{student.phone}</td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline">{student.program_name}</Badge>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {student.dob ? (
+                            <div className="flex items-center gap-1">
+                              {upcomingBday && upcomingBday.days_until <= 7 && (
+                                <Cake className="w-4 h-4 text-pink-500" />
+                              )}
+                              <span className={upcomingBday && upcomingBday.days_until <= 7 ? 'text-pink-600 font-medium' : ''}>
+                                {new Date(student.dob).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openCompletionDialog(student)}
+                            data-testid={`mark-complete-${student.id}`}
+                          >
+                            <Award className="w-4 h-4 mr-1" />
+                            Mark Complete
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {(!dashboard?.students || dashboard.students.length === 0) && (
                     <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                      <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                         No students assigned yet
                       </td>
                     </tr>
