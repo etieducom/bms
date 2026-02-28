@@ -333,6 +333,22 @@ function App() {
               </PrivateRoute>
             }
           />
+          <Route
+            path="/meta-settings"
+            element={
+              <PrivateRoute adminOnly>
+                <Layout><MetaSettingsPage /></Layout>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/meta-analytics"
+            element={
+              <PrivateRoute branchAdminOnly>
+                <Layout><MetaAnalyticsPage /></Layout>
+              </PrivateRoute>
+            }
+          />
           {/* Public routes - no auth required */}
           <Route path="/exam/:examId" element={<PublicExamPage />} />
           <Route path="/certificate-request" element={<CertificateRequestPage />} />
