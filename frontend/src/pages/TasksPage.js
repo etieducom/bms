@@ -54,9 +54,15 @@ const TasksPage = () => {
       // Use getBranchUsers instead of getUsers - this works for both Admin and Branch Admin
       const response = await adminAPI.getBranchUsers();
       // Filter out inactive users and self
-      const filteredUsers = response.data.filter(u => 
+      let filteredUsers = response.data.filter(u => 
         u.is_active !== false && u.id !== user.id
       );
+      // Counsellors can only assign to Trainers and FDEs
+      if (isCounsellor) {
+        filteredUsers = filteredUsers.filter(u => 
+          u.role === 'Trainer' || u.role === 'Front Desk Executive'
+        );
+      }
       setUsers(filteredUsers);
     } catch (error) {
       console.error('Failed to fetch users:', error);
