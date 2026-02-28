@@ -576,37 +576,6 @@ class CashHandlingUpdate(BaseModel):
     remarks: Optional[str] = None
     status: str = "Deposited"
 
-# Task Management Models
-class Task(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    title: str
-    description: Optional[str] = None
-    assigned_to: str  # User ID
-    assigned_to_name: Optional[str] = None
-    assigned_by: str  # User ID
-    assigned_by_name: Optional[str] = None
-    branch_id: Optional[str] = None
-    priority: str = "Medium"  # Low, Medium, High, Urgent
-    status: str = "Pending"  # Pending, In Progress, Completed
-    due_date: Optional[str] = None
-    completed_at: Optional[datetime] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class TaskCreate(BaseModel):
-    title: str
-    description: Optional[str] = None
-    assigned_to: str
-    priority: str = "Medium"
-    due_date: Optional[str] = None
-
-class TaskUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    priority: Optional[str] = None
-    status: Optional[str] = None
-    due_date: Optional[str] = None
-
 class Token(BaseModel):
     access_token: str
     token_type: str
