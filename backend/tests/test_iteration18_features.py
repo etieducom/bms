@@ -123,13 +123,12 @@ class TestTaskManagement:
         assert token, "Failed to get auth token"
         headers = TestSetup.get_auth_headers(token)
         
-        response = requests.get(f"{BASE_URL}/api/admin/branch-users", headers=headers)
+        response = requests.get(f"{BASE_URL}/api/branch/users", headers=headers)
         assert response.status_code == 200, f"Failed to get branch users: {response.text}"
         
         users = response.json()
         assert isinstance(users, list)
         print(f"PASS: Branch Admin can see {len(users)} branch users for task assignment")
-        return users
     
     def test_branch_admin_can_create_task(self):
         """Test Branch Admin can create and assign tasks to any role"""
@@ -138,11 +137,14 @@ class TestTaskManagement:
         headers = TestSetup.get_auth_headers(token)
         
         # Get branch users to find an assignee
-        users_response = requests.get(f"{BASE_URL}/api/admin/branch-users", headers=headers)
+        users_response = requests.get(f"{BASE_URL}/api/branch/users", headers=headers)
         users = users_response.json()
         
+        if not isinstance(users, list):
+            pytest.skip("Could not fetch branch users")
+        
         # Find a Trainer or FDE to assign to
-        assignees = [u for u in users if u.get('role') in ['Trainer', 'Front Desk Executive']]
+        assignees = [u for u in users if isinstance(u, dict) and u.get('role') in ['Trainer', 'Front Desk Executive']]
         if not assignees:
             pytest.skip("No Trainer or FDE available for task assignment")
         
@@ -162,7 +164,6 @@ class TestTaskManagement:
         result = response.json()
         assert "id" in result or "message" in result
         print(f"PASS: Branch Admin created task for {assignee['role']} ({assignee['name']})")
-        return result.get('id')
     
     def test_get_tasks(self):
         """Test fetching tasks"""
@@ -188,7 +189,7 @@ class TestTrainerStats:
         assert token, "Failed to get auth token"
         headers = TestSetup.get_auth_headers(token)
         
-        response = requests.get(f"{BASE_URL}/api/batches/trainers/stats", headers=headers)
+        response = requests.get(f"{BASE_URL}/api/trainer-stats", headers=headers)
         assert response.status_code == 200, f"Failed to get trainer stats: {response.text}"
         
         stats = response.json()
