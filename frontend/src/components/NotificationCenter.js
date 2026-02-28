@@ -206,6 +206,25 @@ const NotificationCenter = () => {
     }
   };
 
+  // Dismiss/delete a notification
+  const dismissNotification = async (notificationId, e) => {
+    e.stopPropagation(); // Prevent triggering markAsRead
+    try {
+      await notificationsAPI.delete(notificationId);
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      toast.success('Notification dismissed');
+    } catch (error) {
+      // If delete API doesn't exist, just remove from local state
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    }
+  };
+
+  // Dismiss followup reminder
+  const dismissFollowup = (followupId, e) => {
+    e.stopPropagation();
+    setDueSoonFollowups(prev => prev.filter(f => f.id !== followupId));
+  };
+
   // Initial fetch and polling
   useEffect(() => {
     fetchData();
