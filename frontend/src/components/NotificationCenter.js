@@ -380,12 +380,19 @@ const NotificationCenter = () => {
               notifications.map(notification => (
                 <div 
                   key={notification.id}
-                  className={`px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer ${
+                  className={`px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer relative group ${
                     !notification.is_read ? 'bg-blue-50' : ''
                   }`}
                   onClick={() => !notification.is_read && markAsRead(notification.id)}
                 >
-                  <div className="flex items-start gap-3">
+                  <button
+                    onClick={(e) => dismissNotification(notification.id, e)}
+                    className="absolute top-2 right-2 p-1 rounded-full hover:bg-slate-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Dismiss"
+                  >
+                    <X className="w-4 h-4 text-slate-500" />
+                  </button>
+                  <div className="flex items-start gap-3 pr-6">
                     <div className="mt-0.5">
                       {getNotificationIcon(notification.notification_type)}
                     </div>
