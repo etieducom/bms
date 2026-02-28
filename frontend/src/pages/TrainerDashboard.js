@@ -165,7 +165,7 @@ const TrainerDashboard = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{dashboard?.total_students || 0}</p>
-                <p className="text-sm text-slate-500">Total Students</p>
+                <p className="text-sm text-slate-500">Active Students</p>
               </div>
             </div>
           </CardContent>
@@ -202,12 +202,12 @@ const TrainerDashboard = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-100 rounded-lg">
-                <BookOpen className="w-6 h-6 text-orange-600" />
+              <div className="p-3 bg-amber-100 rounded-lg">
+                <Award className="w-6 h-6 text-amber-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{dashboard?.curricula?.length || 0}</p>
-                <p className="text-sm text-slate-500">Curricula</p>
+                <p className="text-2xl font-bold">{dashboard?.total_passed || 0}</p>
+                <p className="text-sm text-slate-500">Passed Students</p>
               </div>
             </div>
           </CardContent>
@@ -219,6 +219,7 @@ const TrainerDashboard = () => {
         <TabsList>
           <TabsTrigger value="batches" data-testid="batches-tab">My Batches</TabsTrigger>
           <TabsTrigger value="students" data-testid="students-tab">Students</TabsTrigger>
+          <TabsTrigger value="passed" data-testid="passed-tab">Passed Students</TabsTrigger>
           <TabsTrigger value="curriculum" data-testid="curriculum-tab">Curriculum</TabsTrigger>
         </TabsList>
 
