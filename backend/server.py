@@ -6447,10 +6447,9 @@ async def get_quiz_qr_code(exam_id: str, current_user: User = Depends(get_curren
     if not exam:
         raise HTTPException(status_code=404, detail="Quiz exam not found")
     
-    # Generate the public quiz URL
-    # Use the frontend URL from environment or construct it
+    # Generate the public quiz URL - use /exam route which matches frontend App.js
     frontend_url = os.environ.get('FRONTEND_URL', 'https://cash-handling-test.preview.emergentagent.com')
-    quiz_url = f"{frontend_url}/public/quiz/{exam_id}"
+    quiz_url = f"{frontend_url}/exam/{exam_id}"
     
     # Generate QR code
     qr = qrcode.QRCode(
