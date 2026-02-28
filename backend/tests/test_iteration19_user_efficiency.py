@@ -27,8 +27,12 @@ class TestUserEfficiencyAPI:
         }
     
     def get_auth_token(self, credentials):
-        """Helper to get auth token"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json=credentials)
+        """Helper to get auth token - uses form-urlencoded format"""
+        data = {
+            "username": credentials["email"],
+            "password": credentials["password"]
+        }
+        response = requests.post(f"{BASE_URL}/api/auth/login", data=data)
         if response.status_code == 200:
             return response.json().get('access_token')
         return None
@@ -150,8 +154,12 @@ class TestFollowupRemindersAPI:
         }
     
     def get_auth_token(self, credentials):
-        """Helper to get auth token"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json=credentials)
+        """Helper to get auth token - uses form-urlencoded format"""
+        data = {
+            "username": credentials["email"],
+            "password": credentials["password"]
+        }
+        response = requests.post(f"{BASE_URL}/api/auth/login", data=data)
         if response.status_code == 200:
             return response.json().get('access_token')
         return None
@@ -208,15 +216,23 @@ class TestSidebarUserEfficiencyLink:
         }
     
     def get_auth_token(self, credentials):
-        """Helper to get auth token"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json=credentials)
+        """Helper to get auth token - uses form-urlencoded format"""
+        data = {
+            "username": credentials["email"],
+            "password": credentials["password"]
+        }
+        response = requests.post(f"{BASE_URL}/api/auth/login", data=data)
         if response.status_code == 200:
             return response.json().get('access_token')
         return None
     
     def test_branch_admin_login_returns_correct_role(self):
         """Test that Branch Admin login returns correct role for sidebar visibility"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json=self.branch_admin_creds)
+        data = {
+            "username": self.branch_admin_creds["email"],
+            "password": self.branch_admin_creds["password"]
+        }
+        response = requests.post(f"{BASE_URL}/api/auth/login", data=data)
         
         assert response.status_code == 200
         data = response.json()
