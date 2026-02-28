@@ -4640,8 +4640,39 @@ async def get_trainer_dashboard(current_user: User = Depends(get_current_user)):
     student_ids = list(set(a['enrollment_id'] for a in assignments))
     students = await db.enrollments.find(
         {"id": {"$in": student_ids}},
-        {"_id": 0, "id": 1, "student_name": 1, "email": 1, "phone": 1, "program_name": 1}
+        {"_id": 0, "id": 1, "student_name": 1, "email": 1, "phone": 1, "program_name": 1, "dob": 1, "status": 1}
     ).to_list(1000)
+    
+    # Calculate upcoming birthdays (next 30 days)
+    today = datetime.now(timezone.utc)
+    upcoming_birthdays = []
+    for student in students:
+        if student.get('dob'):
+            try:
+                dob = student['dob']
+                if isinstance(dob, str):
+                    dob_date = datetime.strptime(dob, '%Y-%m-%d').date()
+                else:
+                    dob_date = dob.date() if hasattr(dob, 'date') else dob
+                
+                # Create this year's birthday
+                this_year_bday = dob_date.replace(year=today.year)
+                if this_year_bday < today.date():
+                    this_year_bday = dob_date.replace(year=today.year + 1)
+                
+                days_until = (this_year_bday - today.date()).days
+                if 0 <= days_until <= 30:
+                    upcoming_birthdays.append({
+                        "student_name": student.get('student_name'),
+                        "enrollment_id": student.get('id'),
+                        "birthday": this_year_bday.strftime('%Y-%m-%d'),
+                        "days_until": days_until
+                    })
+            except:
+                pass
+    
+    # Sort by days until birthday
+    upcoming_birthdays.sort(key=lambda x: x['days_until'])
     
     # Get today's attendance
     today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
