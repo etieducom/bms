@@ -257,13 +257,19 @@ const LeadsPage = () => {
     }
     
     try {
-      await leadsAPI.update(leadId, { status: newStatus });
+      const response = await leadsAPI.update(leadId, { status: newStatus });
+      // Immediately update local state with the response data for instant UI feedback
+      setLeads(prevLeads => 
+        prevLeads.map(lead => 
+          lead.id === leadId ? { ...lead, status: newStatus } : lead
+        )
+      );
       toast.success('Status updated!');
-      // Small delay to ensure database is updated before fetching
-      setTimeout(() => fetchLeads(), 500);
     } catch (error) {
       console.error('Status update error:', error);
       toast.error(error.response?.data?.detail || 'Failed to update status');
+      // Refresh leads on error to ensure UI is in sync with server
+      fetchLeads();
     }
   };
 
