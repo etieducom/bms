@@ -7620,14 +7620,19 @@ async def fetch_and_sync_lead(config: dict, meta_lead: MetaLead):
         default_program_id = programs[0]['id'] if programs else None
         
         if default_program_id:
+            # Generate custom lead ID
+            lead_id = await generate_custom_id(config['branch_id'], 'L')
+            
             crm_lead = Lead(
+                lead_id=lead_id,
                 name=name,
                 email=email or f"{phone}@facebook.lead",
                 number=phone or "",
                 program_id=default_program_id,
                 lead_source="Facebook Lead Ad",
-                status="New",
+                status=LeadStatus.NEW,
                 branch_id=config['branch_id'],
+                counsellor_id="system",  # Auto-imported lead
                 meta_lead_id=meta_lead.id,
                 meta_campaign=lead_data.get("campaign_name"),
                 meta_ad=lead_data.get("ad_name")
