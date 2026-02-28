@@ -7926,7 +7926,8 @@ Your response MUST be valid JSON:
 Be specific, data-driven, and actionable."""
             ).with_model("openai", "gpt-4o")
             
-            ai_response = await chat.send_message_async(f"Analyze this Facebook Ads data:\n\n{analytics_summary}")
+            user_message = UserMessage(text=f"Analyze this Facebook Ads data:\n\n{analytics_summary}")
+            ai_response = await chat.send_message(user_message)
             
             try:
                 ai_text = ai_response.strip()
