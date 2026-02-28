@@ -86,6 +86,8 @@ const Layout = ({ children }) => {
     { icon: Zap, label: 'User Efficiency', path: '/user-efficiency', show: isBranchAdmin },
     // Attendance Insights - For Branch Admin only
     { icon: CalendarCheck, label: 'Attendance Insights', path: '/attendance-insights', show: isBranchAdmin },
+    // Meta Analytics - For Branch Admin only
+    { icon: Facebook, label: 'Meta Analytics', path: '/meta-analytics', show: isBranchAdmin },
     // Campaign Management - For Branch Admin only
     { icon: Target, label: 'Campaigns', path: '/campaigns', show: isBranchAdmin },
     // Deleted Leads - For Branch Admin only (NOT Super Admin)
