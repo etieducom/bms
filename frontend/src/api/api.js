@@ -284,7 +284,7 @@ export const certificateAPI = {
 export const tasksAPI = {
   getAll: () => api.get('/tasks'),
   create: (data) => api.post('/tasks', data),
-  updateStatus: (id, status) => api.put(`/tasks/${id}/status`, null, { params: { status } }),
+  updateStatus: (id, status) => api.put(`/tasks/${id}`, { status }),
 };
 
 export const examsAPI = {
