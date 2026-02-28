@@ -329,6 +329,7 @@ export const notificationAPI = {
 // AI Analytics API
 export const aiAnalyticsAPI = {
   getBranchInsights: () => api.get('/analytics/ai-branch-insights'),
+  getUserEfficiency: () => api.get('/analytics/user-efficiency'),
 };
 
 // Cash Handling API
