@@ -153,7 +153,7 @@ class TestAttendanceInsights:
         """Get Trainer auth headers - should NOT have access"""
         response = requests.post(f"{BASE_URL}/api/auth/login", data={
             "username": "trainer@etieducom.com",
-            "password": "password123"
+            "password": "test123"
         })
         if response.status_code == 200:
             return {"Authorization": f"Bearer {response.json().get('access_token')}"}
@@ -197,7 +197,7 @@ class TestTrainerDashboard:
         """Get Trainer auth headers"""
         response = requests.post(f"{BASE_URL}/api/auth/login", data={
             "username": "trainer@etieducom.com",
-            "password": "password123"
+            "password": "test123"
         })
         if response.status_code == 200:
             return {"Authorization": f"Bearer {response.json().get('access_token')}"}
@@ -243,7 +243,7 @@ class TestTrainerTasksAccess:
         """Get Trainer auth headers"""
         response = requests.post(f"{BASE_URL}/api/auth/login", data={
             "username": "trainer@etieducom.com",
-            "password": "password123"
+            "password": "test123"
         })
         if response.status_code == 200:
             return {"Authorization": f"Bearer {response.json().get('access_token')}"}
