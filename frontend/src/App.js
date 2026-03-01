@@ -351,6 +351,22 @@ function App() {
               </PrivateRoute>
             }
           />
+          <Route
+            path="/royalty-collection"
+            element={
+              <PrivateRoute adminOnly>
+                <Layout><RoyaltyCollectionPage /></Layout>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/audit-logs"
+            element={
+              <PrivateRoute branchAdminAllowed>
+                <Layout><AuditLogsPage /></Layout>
+              </PrivateRoute>
+            }
+          />
           {/* Public routes - no auth required */}
           <Route path="/exam/:examId" element={<PublicExamPage />} />
           <Route path="/certificate-request" element={<CertificateRequestPage />} />
