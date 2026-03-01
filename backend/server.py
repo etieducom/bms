@@ -3668,7 +3668,7 @@ async def create_payment_plan(plan: PaymentPlanCreate, current_user: User = Depe
 
 # Payment Recording
 @api_router.post("/payments", response_model=Payment)
-async def create_payment(payment: PaymentCreate, current_user: User = Depends(get_current_user)):
+async def create_payment(payment: PaymentCreate, request: Request, current_user: User = Depends(get_current_user)):
     if current_user.role not in [UserRole.ADMIN, UserRole.FRONT_DESK, UserRole.BRANCH_ADMIN]:
         raise HTTPException(status_code=403, detail="Only Front Desk Executive or Branch Admin can record payments")
     
