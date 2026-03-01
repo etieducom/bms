@@ -8124,6 +8124,310 @@ async def reset_system(current_user: User = Depends(require_role([UserRole.ADMIN
         logger.error(f"Error during system reset: {str(e)}")
         raise HTTPException(status_code=500, detail=f"System reset failed: {str(e)}")
 
+# ========== ROYALTY MANAGEMENT ==========
+
+@api_router.get("/royalty/branch/{branch_id}")
+async def get_branch_royalty(
+    branch_id: str,
+    month: int = None,
+    year: int = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get royalty calculation for a specific branch for a given month"""
+    # Check access
+    if current_user.role == UserRole.BRANCH_ADMIN and current_user.branch_id != branch_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Default to last month
+    today = datetime.now(timezone.utc)
+    if month is None or year is None:
+        # Get last month
+        if today.month == 1:
+            month = 12
+            year = today.year - 1
+        else:
+            month = today.month - 1
+            year = today.year
+    
+    # Get branch info
+    branch = await db.branches.find_one({"id": branch_id}, {"_id": 0})
+    if not branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    
+    royalty_percentage = branch.get('royalty_percentage', 0)
+    
+    # Calculate date range for the month
+    start_date = datetime(year, month, 1, tzinfo=timezone.utc)
+    if month == 12:
+        end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+    else:
+        end_date = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+    
+    # Get all enrollment payments for the branch in this period
+    # Convert to ISO strings for comparison
+    start_str = start_date.isoformat()
+    end_str = end_date.isoformat()
+    
+    payments = await db.payments.find({
+        "branch_id": branch_id,
+        "payment_date": {"$gte": start_str, "$lt": end_str},
+        "payment_type": {"$ne": "Certificate Fee"}  # Exclude certificate fees
+    }, {"_id": 0}).to_list(10000)
+    
+    total_collection = sum(p.get('amount', 0) for p in payments)
+    royalty_amount = round(total_collection * (royalty_percentage / 100), 2)
+    
+    # Due date is 5th of next month
+    if month == 12:
+        due_date = datetime(year + 1, 1, 5)
+    else:
+        due_date = datetime(year, month + 1, 5)
+    
+    # Check if already paid (stored in royalty_payments collection)
+    royalty_payment = await db.royalty_payments.find_one({
+        "branch_id": branch_id,
+        "month": month,
+        "year": year
+    }, {"_id": 0})
+    
+    return {
+        "branch_id": branch_id,
+        "branch_name": branch.get('name'),
+        "month": month,
+        "year": year,
+        "month_name": datetime(year, month, 1).strftime('%B %Y'),
+        "royalty_percentage": royalty_percentage,
+        "total_collection": total_collection,
+        "royalty_amount": royalty_amount,
+        "due_date": due_date.strftime('%Y-%m-%d'),
+        "due_date_display": f"5th {datetime(year, month + 1 if month < 12 else 1, 1).strftime('%B %Y') if month < 12 else datetime(year + 1, 1, 1).strftime('%B %Y')}",
+        "is_paid": royalty_payment.get('is_paid', False) if royalty_payment else False,
+        "paid_date": royalty_payment.get('paid_date') if royalty_payment else None,
+        "payment_count": len(payments)
+    }
+
+@api_router.get("/royalty/all")
+async def get_all_branches_royalty(
+    month: int = None,
+    year: int = None,
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Get royalty for all branches - Super Admin only"""
+    # Default to last month
+    today = datetime.now(timezone.utc)
+    if month is None or year is None:
+        if today.month == 1:
+            month = 12
+            year = today.year - 1
+        else:
+            month = today.month - 1
+            year = today.year
+    
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    
+    royalty_data = []
+    total_royalty = 0
+    total_paid = 0
+    total_pending = 0
+    
+    for branch in branches:
+        branch_id = branch['id']
+        royalty_percentage = branch.get('royalty_percentage', 0)
+        
+        # Calculate date range
+        start_date = datetime(year, month, 1, tzinfo=timezone.utc)
+        if month == 12:
+            end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+        else:
+            end_date = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+        
+        start_str = start_date.isoformat()
+        end_str = end_date.isoformat()
+        
+        # Get payments
+        payments = await db.payments.find({
+            "branch_id": branch_id,
+            "payment_date": {"$gte": start_str, "$lt": end_str},
+            "payment_type": {"$ne": "Certificate Fee"}
+        }, {"_id": 0}).to_list(10000)
+        
+        total_collection = sum(p.get('amount', 0) for p in payments)
+        royalty_amount = round(total_collection * (royalty_percentage / 100), 2)
+        
+        # Check if paid
+        royalty_payment = await db.royalty_payments.find_one({
+            "branch_id": branch_id,
+            "month": month,
+            "year": year
+        }, {"_id": 0})
+        
+        is_paid = royalty_payment.get('is_paid', False) if royalty_payment else False
+        
+        royalty_data.append({
+            "branch_id": branch_id,
+            "branch_name": branch.get('name'),
+            "city": branch.get('city'),
+            "royalty_percentage": royalty_percentage,
+            "total_collection": total_collection,
+            "royalty_amount": royalty_amount,
+            "is_paid": is_paid,
+            "paid_date": royalty_payment.get('paid_date') if royalty_payment else None
+        })
+        
+        total_royalty += royalty_amount
+        if is_paid:
+            total_paid += royalty_amount
+        else:
+            total_pending += royalty_amount
+    
+    # Due date
+    if month == 12:
+        due_date = f"5th January {year + 1}"
+    else:
+        due_date = f"5th {datetime(year, month + 1, 1).strftime('%B %Y')}"
+    
+    return {
+        "month": month,
+        "year": year,
+        "month_name": datetime(year, month, 1).strftime('%B %Y'),
+        "due_date": due_date,
+        "summary": {
+            "total_branches": len(branches),
+            "total_royalty": round(total_royalty, 2),
+            "total_paid": round(total_paid, 2),
+            "total_pending": round(total_pending, 2)
+        },
+        "branches": sorted(royalty_data, key=lambda x: x['royalty_amount'], reverse=True)
+    }
+
+@api_router.post("/royalty/mark-paid/{branch_id}")
+async def mark_royalty_paid(
+    branch_id: str,
+    month: int,
+    year: int,
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Mark royalty as paid for a branch - Super Admin only"""
+    await db.royalty_payments.update_one(
+        {"branch_id": branch_id, "month": month, "year": year},
+        {"$set": {
+            "branch_id": branch_id,
+            "month": month,
+            "year": year,
+            "is_paid": True,
+            "paid_date": datetime.now(timezone.utc).isoformat(),
+            "marked_by": current_user.email
+        }},
+        upsert=True
+    )
+    
+    return {"message": "Royalty marked as paid"}
+
+# ========== AUDIT LOGS ==========
+
+@api_router.get("/audit-logs")
+async def get_audit_logs(
+    page: int = 1,
+    limit: int = 50,
+    user_id: str = None,
+    entity_type: str = None,
+    action: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get audit logs - Branch Admin sees their branch users, Super Admin sees Branch Admins"""
+    query = {}
+    
+    if current_user.role == UserRole.BRANCH_ADMIN:
+        # Branch Admin sees logs of users in their branch (excluding other Branch Admins)
+        query["branch_id"] = current_user.branch_id
+        query["user_role"] = {"$in": ["trainer", "counsellor", "fde", "front_desk_executive"]}
+    elif current_user.role == UserRole.ADMIN:
+        # Super Admin sees Branch Admin logs
+        query["user_role"] = "branch_admin"
+    else:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Apply filters
+    if user_id:
+        query["user_id"] = user_id
+    if entity_type:
+        query["entity_type"] = entity_type
+    if action:
+        query["action"] = action
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    
+    skip = (page - 1) * limit
+    
+    logs = await db.audit_logs.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.audit_logs.count_documents(query)
+    
+    return {
+        "logs": logs,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit
+    }
+
+@api_router.get("/audit-logs/summary")
+async def get_audit_logs_summary(
+    days: int = 7,
+    current_user: User = Depends(get_current_user)
+):
+    """Get audit log summary for dashboard"""
+    query = {}
+    
+    if current_user.role == UserRole.BRANCH_ADMIN:
+        query["branch_id"] = current_user.branch_id
+        query["user_role"] = {"$in": ["trainer", "counsellor", "fde", "front_desk_executive"]}
+    elif current_user.role == UserRole.ADMIN:
+        query["user_role"] = "branch_admin"
+    else:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get logs from last N days
+    start_date = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    query["created_at"] = {"$gte": start_date}
+    
+    logs = await db.audit_logs.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Summarize by user
+    user_activity = {}
+    action_counts = {}
+    entity_counts = {}
+    
+    for log in logs:
+        # By user
+        user_key = f"{log['user_name']} ({log['user_email']})"
+        if user_key not in user_activity:
+            user_activity[user_key] = {"count": 0, "last_action": None}
+        user_activity[user_key]["count"] += 1
+        if not user_activity[user_key]["last_action"]:
+            user_activity[user_key]["last_action"] = log['created_at']
+        
+        # By action
+        action_counts[log['action']] = action_counts.get(log['action'], 0) + 1
+        
+        # By entity
+        entity_counts[log['entity_type']] = entity_counts.get(log['entity_type'], 0) + 1
+    
+    return {
+        "period_days": days,
+        "total_actions": len(logs),
+        "user_activity": [{"user": k, "count": v["count"], "last_action": v["last_action"]} for k, v in sorted(user_activity.items(), key=lambda x: x[1]["count"], reverse=True)],
+        "action_breakdown": action_counts,
+        "entity_breakdown": entity_counts,
+        "recent_logs": logs[:10]
+    }
+
 app.include_router(api_router)
 
 app.add_middleware(
