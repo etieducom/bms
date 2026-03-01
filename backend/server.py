@@ -1794,10 +1794,16 @@ async def delete_branch(branch_id: str, current_user: User = Depends(require_rol
     return {"message": "Branch deleted successfully"}
 
 @api_router.put("/admin/branches/{branch_id}", response_model=Branch)
-async def update_branch(branch_id: str, branch_update: BranchCreate, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+async def update_branch(branch_id: str, branch_update: BranchUpdate, current_user: User = Depends(require_role([UserRole.ADMIN]))):
+    # Only update non-None fields
+    update_data = {k: v for k, v in branch_update.model_dump().items() if v is not None}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
     result = await db.branches.update_one(
         {"id": branch_id},
-        {"$set": branch_update.model_dump()}
+        {"$set": update_data}
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Branch not found")
