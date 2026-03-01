@@ -3842,6 +3842,17 @@ async def create_payment(payment: PaymentCreate, request: Request, current_user:
         }
     )
     
+    # Audit Log
+    await create_audit_log(
+        user=current_user,
+        action="create",
+        entity_type="payment",
+        entity_id=new_payment.id,
+        entity_name=f"₹{payment.amount} for {enrollment.get('student_name', '')} ({new_payment.receipt_number})",
+        changes={"amount": payment.amount, "student": enrollment.get('student_name'), "receipt": new_payment.receipt_number},
+        request=request
+    )
+    
     return new_payment
 
 @api_router.get("/enrollments/{enrollment_id}/payments")
