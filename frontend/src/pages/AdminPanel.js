@@ -355,7 +355,7 @@ const AdminPanel = () => {
       setBranchForm({ 
         name: '', location: '', address: '', city: '', state: '', pincode: '',
         owner_name: '', owner_email: '', owner_phone: '', owner_designation: '',
-        branch_phone: '', branch_email: ''
+        branch_phone: '', branch_email: '', royalty_percentage: 0
       });
       setEditingBranch(null);
       fetchData();
