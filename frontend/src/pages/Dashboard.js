@@ -95,6 +95,10 @@ const Dashboard = () => {
           // Also fetch branch incentive stats for Branch Admin
           const branchIncentiveRes = await incentivesAPI.getBranchIncentiveStats();
           setBranchIncentiveStats(branchIncentiveRes.data);
+          
+          // Fetch royalty for last month
+          const royaltyRes = await royaltyAPI.getBranchRoyalty(user.branch_id);
+          setRoyaltyData(royaltyRes.data);
         } catch (e) {
           console.error('Error fetching branch stats:', e);
         }
