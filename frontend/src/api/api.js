@@ -356,4 +356,17 @@ export const metaAPI = {
   syncAds: (branchId) => api.post(`/meta/sync-ads/${branchId}`),
 };
 
+// Royalty Management API
+export const royaltyAPI = {
+  getBranchRoyalty: (branchId, month, year) => api.get(`/royalty/branch/${branchId}`, { params: { month, year } }),
+  getAllRoyalty: (month, year) => api.get('/royalty/all', { params: { month, year } }),
+  markPaid: (branchId, month, year) => api.post(`/royalty/mark-paid/${branchId}`, null, { params: { month, year } }),
+};
+
+// Audit Logs API
+export const auditAPI = {
+  getLogs: (params = {}) => api.get('/audit-logs', { params }),
+  getSummary: (days = 7) => api.get('/audit-logs/summary', { params: { days } }),
+};
+
 export default api;
