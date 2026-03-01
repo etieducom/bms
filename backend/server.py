@@ -136,6 +136,21 @@ class BranchCreate(BaseModel):
     branch_email: EmailStr
     royalty_percentage: float = 0.0
 
+class BranchUpdate(BaseModel):
+    name: Optional[str] = None
+    location: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pincode: Optional[str] = None
+    owner_name: Optional[str] = None
+    owner_email: Optional[EmailStr] = None
+    owner_phone: Optional[str] = None
+    owner_designation: Optional[str] = None
+    branch_phone: Optional[str] = None
+    branch_email: Optional[EmailStr] = None
+    royalty_percentage: Optional[float] = None
+
 # Audit Log Model for tracking changes
 class AuditLog(BaseModel):
     model_config = ConfigDict(extra="ignore")
