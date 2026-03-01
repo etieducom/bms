@@ -2140,6 +2140,17 @@ async def update_lead(lead_id: str, lead_update: LeadUpdate, request: Request, c
                 await db.notifications.insert_one(notification.model_dump())
                 logger.info(f"Created lead converted notification for FDE {fde['id']}")
     
+    # Audit Log
+    await create_audit_log(
+        user=current_user,
+        action="update",
+        entity_type="lead",
+        entity_id=lead_id,
+        entity_name=f"{updated_lead_obj.name} ({lead.get('lead_id', '')})",
+        changes={"updated_fields": list(update_data.keys()), "old_status": old_status, "new_status": lead_update.status},
+        request=request
+    )
+    
     return updated_lead_obj
 
 class LeadDeleteRequest(BaseModel):
