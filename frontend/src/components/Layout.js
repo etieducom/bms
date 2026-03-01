@@ -88,6 +88,8 @@ const Layout = ({ children }) => {
     { icon: CalendarCheck, label: 'Attendance Insights', path: '/attendance-insights', show: isBranchAdmin },
     // Meta Analytics - For Branch Admin only
     { icon: Facebook, label: 'Meta Analytics', path: '/meta-analytics', show: isBranchAdmin },
+    // Audit Logs - For Branch Admin (see team activity) and Super Admin (see branch admin activity)
+    { icon: History, label: 'Activity Logs', path: '/audit-logs', show: isBranchAdmin || isSuperAdmin },
     // Campaign Management - For Branch Admin only
     { icon: Target, label: 'Campaigns', path: '/campaigns', show: isBranchAdmin },
     // Deleted Leads - For Branch Admin only (NOT Super Admin)
@@ -100,6 +102,8 @@ const Layout = ({ children }) => {
     { icon: BookOpen, label: 'Curriculum', path: '/curriculum', show: isAcademicController },
     // Certificates - For Super Admin
     { icon: Award, label: 'Certificates', path: '/certificates', show: isSuperAdmin },
+    // Royalty Collection - For Super Admin only
+    { icon: DollarSign, label: 'Royalty Collection', path: '/royalty-collection', show: isSuperAdmin },
     // Meta Settings - For Super Admin only
     { icon: Facebook, label: 'Meta Settings', path: '/meta-settings', show: isSuperAdmin },
     // Admin Panel - For Super Admin and Branch Admin (Branch Admin only sees limited tabs)
